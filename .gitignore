@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+.vscode/
+seed.sql
+seed.py
+static/assets/
