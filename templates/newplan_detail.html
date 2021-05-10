@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}
+Plan detail
+{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="jumbotron">
+        <h1 class="h3">{{plan.plan_name}}</h1>
+        <p class="lead">
+            Agency Lead: {{plan.agency_lead}}
+        </p>
+        <hr class="my-4">
+        <p>Plan Resolution: {{plan.plan_resolution}}</p>
+        <p>Planning Method: {{plan.planning_method}}</p>
+        <p>Plan Timeframe: {{plan.plan_timeframe}}</p>
+        <p>Geo Extent: {{plan.geo_extent}}</p>
+        <p>Plan Resolution: {{plan.plan_resolution}}</p>
+        <p>Planning_method: {{plan.planning_method}}</p>
+        <hr class="my-4">
+        <table class="table table-sm table-light">
+            <thead>
+                <tr>
+                    <th scope="col">Acquisition</th>
+                    <th scope="col">Easement</th>
+                    <th scope="col">Stewardship</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{plan.acquisition}}</td>
+                    <td>{{plan.easement}}</td>
+                    <td>{{plan.stewardship}}</td>
+                </tr>
+            </tbody>
+        </table>
+        <hr class="my-4">
+        <p class="lead">RESTORE Goal Framework</p>
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">Goal</th>
+                    <th scope="col">Information</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Habitat</td>
+                    <td>{{plan.habitat}}</td>
+                </tr>
+                <tr>
+                    <td>Water Quality</td>
+                    <td>{{plan.water_quality}}</td>
+                </tr>
+                <tr>
+                    <td>Resources & Species</td>
+                    <td>{{plan.resources_species}}</td>
+                </tr>
+                <tr>
+                    <td>Community Resilience</td>
+                    <td>{{plan.community_resilience}}</td>
+                </tr>
+                <tr>
+                    <td>Ecosystem Resilience</td>
+                    <td>{{plan.ecosystem_resilience}}</td>
+                </tr>
+                <tr>
+                    <td>Gulf Economy</th>
+                    <td>{{plan.gulf_economy}}</td>
+                </tr>
+            </tbody>
+        </table>
+        {% if 'static/assets/' in plan.plan_url %}
+        <a class="btn btn-primary btn-lg" href="https://s3.amazonaws.com/planinventory/{{plan.plan_url}}">Raw Document</a>
+        {% else %}
+        <a class="btn btn-primary btn-lg" href="{{plan.plan_url}}">Raw Document</a>
+        {% endif %}
+        <hr class="my-2">
+        <div class="embed-responsive embed-responsive-16by9">
+            {% if 'static/assets/' in plan.plan_url %}
+            <iframe class="embed-responsive-item" src="https://s3.amazonaws.com/planinventory/{{plan.plan_url}}" allowfullscreen></iframe>
+            {% else %}
+            <iframe class="embed-responsive-item" src="{{plan.plan_url}}" allowfullscreen></iframe>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}
+

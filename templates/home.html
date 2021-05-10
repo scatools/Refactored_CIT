@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% block title %}
+Home
+{% endblock %}
+
+{% block additionalcss %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+  integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+  crossorigin="" />
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" />
+<style>
+  #filter-btn {
+    position: absolute;
+    top: 75px;
+    left: 50px;
+    padding: 10px;
+    z-index: 500;
+  }
+
+  .sidenav {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 600;
+    top: 0;
+    left: 0;
+    background-color: rgb(49, 48, 48);
+    overflow-x: hidden;
+    transition: 0.5s;
+    padding-top: 60px;
+  }
+
+  .sidenav a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+  }
+
+  .sidenav a:hover {
+    color: #f1f1f1;
+  }
+
+  .sidenav .closebtn {
+    position: absolute;
+    top: 0;
+    right: 25px;
+    font-size: 36px;
+    margin-left: 50px;
+  }
+
+  #table {
+    height: 80vh;
+    width: 0;
+    position: absolute;
+    z-index: 450;
+    top: 100px;
+    right: 100px;
+    background-color: rgba(49, 48, 48, 0.3);
+    overflow-x: hidden;
+    transition: 0.5s;
+  }
+
+  #table .closebtn {
+    position: absolute;
+    top: 0;
+    right: 25px;
+    font-size: 36px;
+    text-align: right;
+    z-index: 500;
+  }
+
+  #main {
+    transition: margin-left .5s;
+  }
+
+  tbody td div {
+    width: 160px;
+    height: 28px;
+    overflow: hidden;
+    word-wrap: break-word;
+  }
+
+  @media screen and (max-height: 450px) {
+    .sidenav {
+      padding-top: 15px;
+    }
+
+    .sidenav a {
+      font-size: 18px;
+    }
+  }
+
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate {
+    float: none;
+    text-align: center;
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div id="mySidenav" class="sidenav">
+  <a href="javascript:void(0)" class="closebtn mt-5" onclick="closeNav()">&times;</a>
+  <p class="h3 mt-5" style="color: rgb(231, 221, 208);">Filter options:</p>
+  <hr>
+  <label for="inputGroupSelect01" style="color: rgb(231, 221, 208);" class="m-2">Geographic scale: </label>
+  <div class="input-group m-2" style="width: auto;">
+    <select class="custom-select" id="inputGroupSelect01">
+      <option selected value="States">States</option>
+      <option value="County">County</option>
+      <option value="City">City</option>
+      <option value="Watershed">Watershed</option>
+      <option value="SE">Southeast Regional</option>
+    </select>
+  </div>
+  <button class="btn btn-primary m-2" id="filter-table">Filter</button>
+</div>
+<button class="btn btn-secondary" id="filter-btn" onclick="openNav()">Filter</button>
+<div id="main">
+  <div id="map" style="height: 95vh;">
+  </div>
+  <div id="table" class="border rounded">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeTable()">&times;</a>
+    <table id="plan_table" style="width:90%; height: 80%">
+      <thead>
+        <tr>
+          <th>Plan Name</th>
+          <th>Related State</th>
+          <th>Plan Details</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block additionaljs %}
+<script>
+  function openNav() {
+    document.getElementById("mySidenav").style.width = "350px";
+    document.getElementById("main").style.marginLeft = "350px";
+  }
+
+  function closeNav() {
+    document.getElementById("mySidenav").style.width = "0";
+    document.getElementById("main").style.marginLeft = "0";
+  }
+
+  function openTable() {
+    document.getElementById("table").style.width = "650px";
+  }
+
+  function closeTable() {
+    document.getElementById("table").style.width = "0";
+  }
+</script>
+
+<script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+<script>
+  $(document).ready(function () {
+    var table = $('#plan_table').DataTable({
+      "ordering": false,
+      "searching": false,
+      "info": false,
+      "lengthChange": false,
+      "ajax": `/spatial_query?lng="-88.222778"&lat="27.120"`,
+      "pageLength": 10,
+      "columns": [
+        {
+          "data": "plan_name", "width": "60%"
+        },
+        {
+          "data": "related_state", "width": "10%"
+        },
+        {
+          "data": "id",
+          "render": function (data, type, full, meta) {
+            return '<a class="btn btn-primary btn-sm" href="/plans/' + data + '">Learn more</a>';
+          }
+        }
+      ]
+    });
+  });
+</script>
+
+<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+  integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+  crossorigin=""></script>
+<script src="https://unpkg.com/esri-leaflet@2.4.1/dist/esri-leaflet.js"
+  integrity="sha512-xY2smLIHKirD03vHKDJ2u4pqeHA7OQZZ27EjtqmuhDguxiUvdsOuXMwkg16PQrm9cgTmXtoxA6kwr8KBy3cdcw=="
+  crossorigin=""></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/javascript">
+  // The first parameter are the coordinates of the center of the map
+  // The second parameter is the zoom level
+  var map = L.map('map').setView([27.120, -88.222778], 6);
+
+  // {s}, {z}, {x} and {y} are placeholders for map tiles
+  // {x} and {y} are the x/y of where you are on the map
+  // {z} is the zoom level
+  // {s} is the subdomain of cartodb
+  var layer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CartoDB</a>'
+  });
+
+
+  // Now add the layer onto the map
+  map.addLayer(layer);
+
+  let SCALayer = L.esri.featureLayer({
+    url: 'https://services1.arcgis.com/cYEfxjk21j8UlsTQ/ArcGIS/rest/services/SCA_Boundary/FeatureServer/0',
+    style: function () {
+      return { color: 'blue', weight: 2, fillOpacity: 0 };
+    }
+  }).addTo(map);
+
+  async function onMapClick(e) {
+
+    $("#plan_table").DataTable().ajax.url(`/spatial_query?lng=${e.latlng.lng}&lat=${e.latlng.lat}`).load();
+    openTable();
+  }
+
+  SCALayer.on('click', onMapClick);
+
+  $('#filter-table').click(function () {
+    const scale = $('#inputGroupSelect01').val()
+    url = `/get_map_data?scale=${scale}`
+    closeNav()
+    // get_map_data(url)
+  })
+
+  // async function get_map_data(url) {
+  //   const res = await axios.get(url)
+  //   map.eachLayer(function (layer) {
+  //     map.removeLayer(layer);
+  //   });
+
+  //   // {s}, {z}, {x} and {y} are placeholders for map tiles
+  //   // {x} and {y} are the x/y of where you are on the map
+  //   // {z} is the zoom level
+  //   // {s} is the subdomain of cartodb
+  //   var layer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+  //     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CartoDB</a>'
+  //   });
+  //   // Now add the layer onto the map
+  //   map.addLayer(layer);
+  //   function whenClicked(e) {
+  //     // e = event
+  //     openTable();
+  //     const scale = e.target.feature.properties.name;
+  //     $("#plan_table").DataTable().ajax.url(`/table_get_data?scale=${scale}`).load()
+  //   }
+
+  //   function onEachFeature(feature, layer) {
+  //     //bind click
+  //     layer.on({
+  //       click: whenClicked
+  //     });
+  //   }
+  //   for (el of res.data.data) {
+  //     geojson = L.geoJson(el, {
+  //       style: {
+  //         fillColor: "purple",
+  //         weight: 0.3,
+  //         opacity: 0.8,
+  //         color: 'white',
+  //         dashArray: '3',
+  //         fillOpacity: 0.5
+  //       },
+  //       onEachFeature: onEachFeature
+  //     }).addTo(map);
+  //   }
+  // }
+
+</script>
+
+{% endblock %}

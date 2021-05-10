@@ -1,7 +1,5 @@
 import os
 
-
-
 from flask import Flask, render_template, redirect, session, flash,jsonify, request,g,url_for
 # from flask_debugtoolbar import DebugToolbarExtension
 from models import connect_db, db, User,Plans,NewPlans,Geom,Likes
