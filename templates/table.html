@@ -56,6 +56,27 @@ Table
             <option value="SE">Southeast Regional</option>
         </select>
     </div>
+      <label for="inputGroupSelect01" style="color: rgb(231, 221, 208);" class="m-2">Timeframe: </label>
+      <div class="input-group m-2" style="width: auto;">
+        <select class="custom-select" id="inputGroupSelect01">
+          <option selected value="All Plans">All Plans:</option>
+          <option value="Plan within 5 years">Plan within 5 years</option>
+          <option value="Plan within 10 years">Plan within 10 years</option>
+          <option value="Plans longer than 10 years">Plans longer than 10 years</option>
+        </select>
+      </div>
+      <label for="inputGroupSelect01" style="color: rgb(231, 221, 208);" class="m-2">Priority: </label>
+      <div class="input-group m-2" style="width: auto;">
+        <select class="custom-select" id="inputGroupSelect01">
+          <option selected value="All Conservations Plans">All Conservations Plans</option>
+          <option value="Water Quality Related Plans">Water Quality Related Plans</option>
+          <option value="Habitat Related Plans">Habitat Related Plans</option>
+          <option value="Resources/Species Related Plans">Resources/Species Related Plans</option>
+          <option value="Community Resilience Related Plans">Community Resilience Related Plans</option>
+          <option value="Ecosystem Resilience Related Plans">Ecosystem Resilience Related Plans</option>
+          <option value="Gulf Economy Related Plans">Gulf Economy Related Plans</option>
+        </select>
+      </div>
     <button class="btn btn-primary m-2" id="filter-table">Filter</button>
 </div>
 <div class="control mx-5 mt-2">
@@ -68,7 +89,7 @@ Table
             <tr>
                 <th></th>
                 <th>Plan Name</th>
-                <th>Planning Method</th>
+                <th>Primary Planning Method</th>
                 <th>Plan Time Frame</th>
                 <th>Agency Lead</th>
                 <th>Plan Details</th>

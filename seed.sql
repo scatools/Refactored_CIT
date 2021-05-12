@@ -20,7 +20,9 @@ CREATE TABLE plans (
 );
 
 COPY plans(plan_name,plan_url,plan_resolution,planning_method,acquisition,easement,stewardship,plan_timeframe,geo_extent,habitat,water_quality,resources_species,community_resilience,ecosystem_resilience,gulf_economy,related_state) 
-FROM 'D:\SCA\app_design_for_tools\inventory_of_plans\flask\test.csv' DELIMITER ',' CSV HEADER;
+FROM 'C:\Users\ppatel\Desktop\CIT_Refactored\Refactored_CIT\test.csv' DELIMITER ',' CSV HEADER;
+
+/*FROM 'D:\SCA\app_design_for_tools\inventory_of_plans\flask\test.csv' DELIMITER ',' CSV HEADER;*/
 
 
 CREATE TABLE newplans (
