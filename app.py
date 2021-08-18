@@ -16,7 +16,7 @@ CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
 
-# work here! << this is where you left off
+# work here! << this is where yo left off
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 #     'DATABASE_URL', 'postgres:///iop') # DATABASE_URL = url from 22nd line, iop should be cit
 # this is the global link
