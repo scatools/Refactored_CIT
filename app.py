@@ -20,6 +20,9 @@ app = Flask(__name__)
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 #     'DATABASE_URL', 'postgres:///iop') # DATABASE_URL = url from 22nd line, iop should be cit
 # this is the global link
+# you're going to have to set the global link 
+#
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'POstgresql://'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@127.0.0.1/cit'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
@@ -179,8 +182,6 @@ def change_password():
             flash("Wrong password", "danger")
             return redirect(url_for('homepage'))
     return render_template('user/changepassword.html', form=form)
-
-
 
 
 #################New plan#####################
@@ -526,8 +527,6 @@ class PlanView(CustomView):
         ('commited','Commited')
         ]
     }
-
-
 
 admin.add_view(UserView(User, db.session))
 admin.add_view(PlanView(Plans, db.session))
