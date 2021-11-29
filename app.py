@@ -12,6 +12,7 @@ import geoalchemy2.functions as func
 import json
 import smtplib
 import datetime
+from itsdangerous.url_safe import URLSafeTimedSerializer
 
 import sqlalchemy
 from sqlalchemy.exc import IntegrityError
@@ -167,7 +168,6 @@ def profile():
 
     form = UpdateForm(obj= g.user)
     if form.validate_on_submit():
-        print("we reach to here!!!!!")
         if(User.authenticate(g.user.username, form.password.data)):
             if(form.email.data):
                 g.user.email = form.email.data
@@ -175,7 +175,6 @@ def profile():
                 g.user.first_name = form.first_name.data
             if(form.last_name.data):
                 g.user.last_name= form.last_name.data
-            print("we reach to here now!!!!!")
             db.session.add(g.user)
             db.session.commit()
             return redirect(url_for('view_user_detail',username =g.user.username))
@@ -213,24 +212,28 @@ class Emails():
         self.sent_from = sent_from
         self.gmail_password = gmail_password.encode('utf-8')
         self.gmail_password = base64.b64encode(self.gmail_password)
-        
+
+        self.timed_safe_serial = URLSafeTimedSerializer('new_plan_confirmation')
+
         self.to = to
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         self.email_text = ''
 
-    # @app.route('/users/<username>/plan/add',methods=["GET","POST"]) 
-    # def validate(self):
 
-    def email_body(self, email_text = DEFAULT_EMAIL_BODY, ):
+
+    def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
         form = NewPlanForm()
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
-        body += '\n user request: '
-        body += '\n plan name: '
-        body += '\n plan time frame: '
-        body += '\n plan link: '
-        body += '\n user request: '
+        body += '\n user request: ' + new_plan.username
+        body += '\n plan name: ' + new_plan.plan_name
+        body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
+        body += '\n plan link: ' + new_plan.plan_url
+
+        # DEV Include a link.
+        body += '\n\n Click this link to confirm new plan and add to the database: '
+        body += '\n\n url safe timed serializer:' + self.timed_safe_serial.dumps([1])
 
         email_text = """
         From: %s
@@ -238,7 +241,7 @@ class Emails():
         Subject: %s
         %s
         """ % (self.sent_from, ", ".join(self.to), self.subject, body)
-        self.email_text =  email_text
+        self.email_text = email_text
 
 
         # request.method == 'POST':
@@ -253,13 +256,11 @@ class Emails():
     # @app.route('/login', methods=['POST']) 
     def email_send(self, new_plan):
         try:
-            self.email_body()
+            self.email_body(new_plan)
 
             smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             smtp_server.ehlo()
-            
             smtp_server.login(self.sent_from, base64.b64decode(self.gmail_password).decode())
-            
             smtp_server.sendmail(self.sent_from, self.to, self.email_text)
 
             smtp_server.close()
@@ -329,7 +330,6 @@ def add_plan(username):
 
             if email_success:
                 # Maybe redirect to an error page.
-
                 db.session.add(new_plan)
                 db.session.commit()
         finally: 
@@ -641,4 +641,4 @@ admin.add_view(PlanView(Plans, db.session))
 admin.add_view(PlanView(NewPlans, db.session))
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
