@@ -1,4 +1,5 @@
 import os
+import base64
 
 from flask import Flask, render_template, redirect, session, flash, jsonify, request, g, url_for
 # from flask_debugtoolbar import DebugToolbarExtension
@@ -19,10 +20,13 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 
-import config as cfg
+try: 
+    import config as cfg
+except:
+    print('Configs not imported')
 
 CURR_USER_KEY = "curr_user"
-DEFAULT_EMAIL_BODY = 'This email is from the SCA  goup project'
+DEFAULT_EMAIL_BODY = 'This email is from the SCA group project.'
 
 app = Flask(__name__)
 
@@ -39,7 +43,7 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = 'postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
-app.config["SECRET_KEY"] = "abc123"
+app.config["SECRET_KEY"] = 'abc123'
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"]=False
 
 # Email configurations for email sendoffs.
@@ -87,7 +91,7 @@ def register_user():
             email = form.email.data
             first_name = form.first_name.data
             last_name = form.last_name.data
-            New_user = User.register(username=username,password=password,email=email,first_name=first_name,last_name=last_name)
+            New_user = User.register(username=username, password=password,email=email,first_name=first_name,last_name=last_name)
             db.session.add(New_user)
             db.session.commit()
             session[CURR_USER_KEY]=New_user.username
@@ -113,7 +117,7 @@ def login_user():
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
-        user = User.authenticate(username=username,password=password)
+        user = User.authenticate(username=username, password=password)
         if(user):
             session[CURR_USER_KEY]=user.username
             if user.is_admin == True:
@@ -195,31 +199,31 @@ def change_password():
             db.session.commit()
             return redirect(url_for('view_user_detail',username =g.user.username))
         else:
-            flash("Wrong password", "danger")
             return redirect(url_for('homepage'))
     return render_template('user/changepassword.html', form=form)
 
 ###################Emails#############
 class Emails():
 
-    def __init__(self, email_text = DEFAULT_EMAIL_BODY):
-        self.sent_from = gmail_user
-        self.gmail_password = gmail_password
-        self.to = [email_reviewer] 
+    def __init__(self, 
+                 sent_from = gmail_user, 
+                 gmail_password = gmail_password, 
+                 to = [email_reviewer]):
 
-        # JL: diag
-        print("self.to: ",  self.to)
-
+        self.sent_from = sent_from
+        self.gmail_password = gmail_password.encode('utf-8')
+        self.gmail_password = base64.b64encode(self.gmail_password)
+        
+        self.to = to
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
-        # self.email_text = email_text
-        self.email_body(email_text = email_text)
-    
+        self.email_text = ''
+
     # @app.route('/users/<username>/plan/add',methods=["GET","POST"]) 
     # def validate(self):
-        
-
 
     def email_body(self, email_text = DEFAULT_EMAIL_BODY, ):
+        form = NewPlanForm()
+
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
         body += '\n user request: '
@@ -234,28 +238,10 @@ class Emails():
         Subject: %s
         %s
         """ % (self.sent_from, ", ".join(self.to), self.subject, body)
-        self.email_body_ =  email_text
+        self.email_text =  email_text
 
-        
-        # # YAH: 
-        # new_plan = NewPlans(plan_name =plan_name,
-        #                     plan_url = plan_url,
-        #                     plan_resolution=plan_resolution, 
-        #                     planning_method = planning_method,
-        #                     # acquisition =acquisition,
-        #                     # easement = easement,
-        #                     # stewardship = stewardship,
-        #                     plan_timeframe = plan_timeframe,
-        #                     agency_lead = agency_lead ,
-        #                     geo_extent = geo_extent,
-        #                     habitat = habitat ,
-        #                     water_quality = water_quality,
-        #                     resources_species = resources_species,
-        #                     community_resilience=community_resilience,
-        #                     ecosystem_resilience=ecosystem_resilience,
-        #                     gulf_economy = gulf_economy,
-        #                     related_state =related_state,
-        #                     username = username)
+
+        # request.method == 'POST':
 
         # Protecting Proprietary or Sensitive Information.
         ## Some plan review has already happened. 
@@ -264,14 +250,17 @@ class Emails():
         ## Maybe include a disclaimer in the message.
 
 
-
-
-    def email_send(self):
+    # @app.route('/login', methods=['POST']) 
+    def email_send(self, new_plan):
         try:
+            self.email_body()
+
             smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             smtp_server.ehlo()
-            smtp_server.login(self.sent_from, self.gmail_password)
-            smtp_server.sendmail(self.sent_from, self.to, self.email_body_)
+            
+            smtp_server.login(self.sent_from, base64.b64decode(self.gmail_password).decode())
+            
+            smtp_server.sendmail(self.sent_from, self.to, self.email_text)
 
             smtp_server.close()
             print ("Email sent successfully!")
@@ -314,29 +303,29 @@ def add_plan(username):
         # this information will be as a post.  
         # gmail for developers: 
 
-        # new_plan = NewPlans(plan_name =plan_name,
-        #                     plan_url = plan_url,
-        #                     plan_resolution=plan_resolution, 
-        #                     planning_method = planning_method,
-        #                     # acquisition =acquisition,
-        #                     # easement = easement,
-        #                     # stewardship = stewardship,
-        #                     plan_timeframe = plan_timeframe,
-        #                     agency_lead = agency_lead ,
-        #                     geo_extent = geo_extent,
-        #                     habitat = habitat ,
-        #                     water_quality = water_quality,
-        #                     resources_species = resources_species,
-        #                     community_resilience=community_resilience,
-        #                     ecosystem_resilience=ecosystem_resilience,
-        #                     gulf_economy = gulf_economy,
-        #                     related_state =related_state,
-        #                     username = username)
+        new_plan = NewPlans(plan_name =plan_name,
+                            plan_url = plan_url,
+                            plan_resolution=plan_resolution, 
+                            planning_method = planning_method,
+                            # acquisition =acquisition,
+                            # easement = easement,
+                            # stewardship = stewardship,
+                            plan_timeframe = plan_timeframe,
+                            agency_lead = agency_lead ,
+                            geo_extent = geo_extent,
+                            habitat = habitat ,
+                            water_quality = water_quality,
+                            resources_species = resources_species,
+                            community_resilience=community_resilience,
+                            ecosystem_resilience=ecosystem_resilience,
+                            gulf_economy = gulf_economy,
+                            related_state =related_state,
+                            username = username)
         
 
         # Implement email notification
         try:
-            email_success = email.email_send()
+            email_success = email.email_send(new_plan)
 
             if email_success:
                 # Maybe redirect to an error page.
@@ -348,8 +337,6 @@ def add_plan(username):
             # Front end might want to add a success or fail message though.
             return redirect(f"/users/{new_plan.username}")
 
-
-       
     else:
         # JL: 
         if (not session.get(CURR_USER_KEY)):
