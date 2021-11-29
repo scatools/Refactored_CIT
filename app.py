@@ -1,33 +1,51 @@
 import os
 
-from flask import Flask, render_template, redirect, session, flash,jsonify, request,g,url_for
+from flask import Flask, render_template, redirect, session, flash, jsonify, request, g, url_for
 # from flask_debugtoolbar import DebugToolbarExtension
 from models import connect_db, db, User,Plans,NewPlans,Geom,Likes
-from sqlalchemy.exc import IntegrityError
+
 from forms import RegisterForm,LoginForm, ChangePasswordFrom,UpdateForm,NewPlanForm
 from functools import wraps
 import geoalchemy2.functions as func
+
 import json
+import smtplib
+import datetime
+
+import sqlalchemy
+from sqlalchemy.exc import IntegrityError
+
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 
+import config as cfg
+
 CURR_USER_KEY = "curr_user"
+DEFAULT_EMAIL_BODY = 'This email is from the SCA  goup project'
 
 app = Flask(__name__)
 
+
+###################Configurations#############
 # work here! << this is where yo left off
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 #     'DATABASE_URL', 'postgres:///iop') # DATABASE_URL = url from 22nd line, iop should be cit
 # this is the global link
 # you're going to have to set the global link 
 #
+# Locally
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@127.0.0.1/cit'
 app.config["SQLALCHEMY_DATABASE_URI"] = 'postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = "abc123"
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"]=False
+
+# Email configurations for email sendoffs.
+gmail_user = cfg.APP_USER
+gmail_password = cfg.APP_PASSWORD
+email_reviewer = cfg.APP_REVIEWER
 
 connect_db(app)
 
@@ -132,14 +150,12 @@ def delete_user(username):
         session.pop(CURR_USER_KEY)
     return redirect("/")
    
-    
 @app.route("/logout", methods= ["POST"])
 def logout():
     """Logs user out and redirects to homepage."""
     session.pop(CURR_USER_KEY)
 
     return redirect("/")
-
 
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
@@ -183,6 +199,87 @@ def change_password():
             return redirect(url_for('homepage'))
     return render_template('user/changepassword.html', form=form)
 
+###################Emails#############
+class Emails():
+
+    def __init__(self, email_text = DEFAULT_EMAIL_BODY):
+        self.sent_from = gmail_user
+        self.gmail_password = gmail_password
+        self.to = [email_reviewer] 
+
+        # JL: diag
+        print("self.to: ",  self.to)
+
+        self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
+        # self.email_text = email_text
+        self.email_body(email_text = email_text)
+    
+    # @app.route('/users/<username>/plan/add',methods=["GET","POST"]) 
+    # def validate(self):
+        
+
+
+    def email_body(self, email_text = DEFAULT_EMAIL_BODY, ):
+        body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
+        body += '\n This is a test email from Python Dev App.'
+        body += '\n user request: '
+        body += '\n plan name: '
+        body += '\n plan time frame: '
+        body += '\n plan link: '
+        body += '\n user request: '
+
+        email_text = """
+        From: %s
+        To: %s
+        Subject: %s
+        %s
+        """ % (self.sent_from, ", ".join(self.to), self.subject, body)
+        self.email_body_ =  email_text
+
+        
+        # # YAH: 
+        # new_plan = NewPlans(plan_name =plan_name,
+        #                     plan_url = plan_url,
+        #                     plan_resolution=plan_resolution, 
+        #                     planning_method = planning_method,
+        #                     # acquisition =acquisition,
+        #                     # easement = easement,
+        #                     # stewardship = stewardship,
+        #                     plan_timeframe = plan_timeframe,
+        #                     agency_lead = agency_lead ,
+        #                     geo_extent = geo_extent,
+        #                     habitat = habitat ,
+        #                     water_quality = water_quality,
+        #                     resources_species = resources_species,
+        #                     community_resilience=community_resilience,
+        #                     ecosystem_resilience=ecosystem_resilience,
+        #                     gulf_economy = gulf_economy,
+        #                     related_state =related_state,
+        #                     username = username)
+
+        # Protecting Proprietary or Sensitive Information.
+        ## Some plan review has already happened. 
+        ## Endangered species locations.
+        ## How to review proprietary and sensitive information....
+        ## Maybe include a disclaimer in the message.
+
+
+
+
+    def email_send(self):
+        try:
+            smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+            smtp_server.ehlo()
+            smtp_server.login(self.sent_from, self.gmail_password)
+            smtp_server.sendmail(self.sent_from, self.to, self.email_body_)
+
+            smtp_server.close()
+            print ("Email sent successfully!")
+            return True
+
+        except Exception as ex:
+            print ("Something went wrong….", ex)
+            return False
 
 #################New plan#####################
 
@@ -190,6 +287,8 @@ def change_password():
 def add_plan(username):
     """User plan form and handing add plan"""
     form = NewPlanForm()
+    email = Emails()
+
     if form.validate_on_submit():
         plan_name = form.plan_name.data
         plan_url = form.plan_url.data
@@ -209,34 +308,50 @@ def add_plan(username):
         gulf_economy = form.gulf_economy.data,
         related_state = form.related_state.data
 
-        new_plan = NewPlans(plan_name =plan_name,
-                            plan_url = plan_url,
-                            plan_resolution=plan_resolution, 
-                            planning_method = planning_method,
-                            # acquisition =acquisition,
-                            # easement = easement,
-                            # stewardship = stewardship,
-                            plan_timeframe = plan_timeframe,
-                            agency_lead = agency_lead ,
-                            geo_extent = geo_extent,
-                            habitat = habitat ,
-                            water_quality = water_quality,
-                            resources_species = resources_species,
-                            community_resilience=community_resilience,
-                            ecosystem_resilience=ecosystem_resilience,
-                            gulf_economy = gulf_economy,
-                            related_state =related_state,
-                            username = username)
-        db.session.add(new_plan)
-        db.session.commit()
+        # JL: use above information to include in the email.
+        # /new-plan/validate/, methods = ["POST"]
+        # then in the body you'll have some information, plan name, blah blah blah
+        # this information will be as a post.  
+        # gmail for developers: 
 
-        # Builout Email Notify 
-
+        # new_plan = NewPlans(plan_name =plan_name,
+        #                     plan_url = plan_url,
+        #                     plan_resolution=plan_resolution, 
+        #                     planning_method = planning_method,
+        #                     # acquisition =acquisition,
+        #                     # easement = easement,
+        #                     # stewardship = stewardship,
+        #                     plan_timeframe = plan_timeframe,
+        #                     agency_lead = agency_lead ,
+        #                     geo_extent = geo_extent,
+        #                     habitat = habitat ,
+        #                     water_quality = water_quality,
+        #                     resources_species = resources_species,
+        #                     community_resilience=community_resilience,
+        #                     ecosystem_resilience=ecosystem_resilience,
+        #                     gulf_economy = gulf_economy,
+        #                     related_state =related_state,
+        #                     username = username)
         
 
+        # Implement email notification
+        try:
+            email_success = email.email_send()
 
-        return redirect(f"/users/{new_plan.username}")
+            if email_success:
+                # Maybe redirect to an error page.
+
+                db.session.add(new_plan)
+                db.session.commit()
+        finally: 
+            # JL: no matter what we re-direct.
+            # Front end might want to add a success or fail message though.
+            return redirect(f"/users/{new_plan.username}")
+
+
+       
     else:
+        # JL: 
         if (not session.get(CURR_USER_KEY)):
             return redirect("/401")
         elif session.get(CURR_USER_KEY)!=username and session.get("admin")==False:
@@ -335,7 +450,7 @@ def like_plan(plan_id):
 
         db.session.commit()
 
-        return jsonify({'msg': "done"})
+        return jsonify({'msg': "done"}) 
 
 @app.route('/plans/<int:plan_id>/update',methods=["GET","POST"])
 def update_plan(plan_id):
