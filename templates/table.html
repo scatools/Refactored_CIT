@@ -35,6 +35,21 @@ Table
     .fas:hover .tooltiptext {
         visibility: visible;
     }
+
+    /* Search bar for the data table */
+    .dataTables_filter {
+        float: right !important;
+    }
+
+    /* Length change for the data table */
+    /* .dataTables_length {
+        float: left !important;
+    } */
+
+    /* Row information for the data table */
+    .dataTables_info {
+        float: right !important;
+    }
 </style>
 {% endblock %}
 
@@ -42,12 +57,12 @@ Table
 
 <div id="mySidenav" class="sidenav">
     <a href="javascript:void(0)" class="closebtn mt-5" onclick="closeNav()">&times;</a>
-    <p class="h3 mt-5" style="color: rgb(231, 221, 208);">Filter table:</p>
+    <p class="h3 mt-5" style="color: rgb(231, 221, 208);">Filter Table:</p>
     <hr>
     <label for="inputGroupSelect01" style="color: rgb(231, 221, 208);" class="m-2">Related State: </label>
     <div class="input-group m-2" style="width: auto;">
         <select class="custom-select" id="inputGroupSelect01">
-            <option selected value="ALL">All scale</option>
+            <option selected value="ALL">All Scales</option>
             <option value="AL">Alabama</option>
             <option value="FL">Florida</option>
             <option value="LA">Louisiana</option>
@@ -56,25 +71,25 @@ Table
             <option value="SE">Southeast Regional</option>
         </select>
     </div>
-      <label for="inputGroupSelect01" style="color: rgb(231, 221, 208);" class="m-2">Timeframe: </label>
+      <label for="inputGroupSelect02" style="color: rgb(231, 221, 208);" class="m-2">Timeframe: </label>
       <div class="input-group m-2" style="width: auto;">
-        <select class="custom-select" id="inputGroupSelect01">
-          <option selected value="All Plans">All Plans:</option>
-          <option value="Plan within 5 years">Plan within 5 years</option>
-          <option value="Plan within 10 years">Plan within 10 years</option>
-          <option value="Plans longer than 10 years">Plans longer than 10 years</option>
+        <select class="custom-select" id="inputGroupSelect02">
+          <option selected value="all">All Plans</option>
+          <option value="within5">Plan Within 5 Years</option>
+          <option value="within10">Plan Within 10 Years</option>
+          <option value="over10">Plans Longer Than 10 Years</option>
         </select>
       </div>
-      <label for="inputGroupSelect01" style="color: rgb(231, 221, 208);" class="m-2">Priority: </label>
+      <label for="inputGroupSelect03" style="color: rgb(231, 221, 208);" class="m-2">Priority: </label>
       <div class="input-group m-2" style="width: auto;">
-        <select class="custom-select" id="inputGroupSelect01">
-          <option selected value="All Conservations Plans">All Conservations Plans</option>
-          <option value="Water Quality Related Plans">Water Quality Related Plans</option>
-          <option value="Habitat Related Plans">Habitat Related Plans</option>
-          <option value="Resources/Species Related Plans">Resources/Species Related Plans</option>
-          <option value="Community Resilience Related Plans">Community Resilience Related Plans</option>
-          <option value="Ecosystem Resilience Related Plans">Ecosystem Resilience Related Plans</option>
-          <option value="Gulf Economy Related Plans">Gulf Economy Related Plans</option>
+        <select class="custom-select" id="inputGroupSelect03">
+          <option selected value="all">All Conservations Plans</option>
+          <option value="wq">Water Quality Related Plans</option>
+          <option value="hs">Habitat System Related Plans</option>
+          <option value="rs">Resources/Species Related Plans</option>
+          <option value="cs">Community Resilience Related Plans</option>
+          <option value="er">Ecosystem Resilience Related Plans</option>
+          <option value="ge">Gulf Economy Related Plans</option>
         </select>
       </div>
     <button class="btn btn-primary m-2" id="filter-table">Filter</button>
@@ -84,7 +99,7 @@ Table
 </div>
 
 <div id="main">
-    <table id="plan_table" class="display" style="width:90%">
+    <table id="plan_table" class="display" style="width:100%">
         <thead>
             <tr>
                 <th></th>
@@ -120,20 +135,24 @@ Table
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
 <script>
     let current_user = false;
-    {% if "curr_user" in session %}
+    {% if ("curr_user" in session) %}
     current_user = true;
     {% endif %}
     const likes = {{ likes }}
     $(document).ready(function () {
         const table = $('#plan_table').DataTable({
-            "ordering": false,
-            "searching": false,
-            "info": false,
-            "lengthChange": false,
+            "order": [[1,"asc"]],
+            "searching": true,
+            "info": true,
+            "lengthChange": true,
             "ajax": "/table_get_data",
+            "dom": '<"top"f>rt<"bottom"ip><"clear">',
+            "columnDefs": [
+                { "orderable": false, "targets": [0, 5, 6] },
+                { "orderable": true, "targets": [1, 2, 3, 4] }
+            ],
             "columns": [
                 {
-                    "orderable": false,
                     "data": "id",
                     "render": function (data, type, full, meta) {
                         if (current_user) {
@@ -147,10 +166,7 @@ Table
                         }
                     }
                 },
-                {
-                    "data": "plan_name",
-                    "width": "30%"
-                },
+                { "data": "plan_name", "width": "30%" },
                 { "data": "planning_method" },
                 { "data": "plan_timeframe" },
                 { "data": "agency_lead", "width": "25%" },
@@ -169,19 +185,20 @@ Table
 
             ]
         });
-        {% if "curr_user" in session %}
+        {% if ("curr_user" in session) %}
         $('#plan_table tbody').on('click', '.fas', function (e) {
             e.target.classList.toggle("liked");
             axios.post(`/plans/${e.target.dataset.id}/like`)
         });
         {% endif %}
         $('#filter-table').click(function () {
-            const scale = $('#inputGroupSelect01').val()
-            table.ajax.url(`/table_get_data?scale=${scale}`).load()
+            const scale = $('#inputGroupSelect01').val();
+            const timeframe = $('#inputGroupSelect02').val();
+            const priority = $('#inputGroupSelect03').val();
+            table.ajax.url(`/table_get_data?scale=${scale}&timeframe=${timeframe}&priority=${priority}`).load();
             closeNav()
         })
     });
-
 </script>
 
 {% endblock %}
