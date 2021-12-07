@@ -1,12 +1,9 @@
 import os
-
-
-
-from flask import Flask, render_template, redirect, session, flash,jsonify, request,g,url_for
+from flask import Flask, render_template, redirect, session, flash, jsonify, request, g, url_for
 # from flask_debugtoolbar import DebugToolbarExtension
-from models import connect_db, db, User,Plans,NewPlans,Geom,Likes
+from models import connect_db, db, User, Plans, NewPlans, Geom, Likes
 from sqlalchemy.exc import IntegrityError
-from forms import RegisterForm,LoginForm, ChangePasswordFrom,UpdateForm,NewPlanForm
+from forms import RegisterForm, LoginForm, ChangePasswordFrom, UpdateForm, NewPlanForm
 from functools import wraps
 import geoalchemy2.functions as func
 import json
@@ -18,13 +15,20 @@ CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
 
+# work here! << this is where yo left off
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+#     'DATABASE_URL', 'postgres:///iop') # DATABASE_URL = url from 22nd line, iop should be cit
+# this is the global link
+# you're going to have to set the global link
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 'postgres:///iop')
+# URI must start with postgresql since SQLAlchemy has removed the support for postgres
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:password@localhost:5432/cit_seed'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = "abc123"
-app.config["DEBUG_TB_INTERCEPT_REDIRECTS"]=False
+app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 connect_db(app)
 
@@ -179,8 +183,6 @@ def change_password():
             flash("Wrong password", "danger")
             return redirect(url_for('homepage'))
     return render_template('user/changepassword.html', form=form)
-
-
 
 
 #################New plan#####################
@@ -396,22 +398,58 @@ def show_table():
 
 @app.route('/table_get_data')
 def table_get_data():
-  """ Create data for table"""
-  query_scale = request.args.get("scale")
-  if query_scale and query_scale != "ALL" :
-      if query_scale == "SE":
-          query_scale = "Regional"
-      plans = Plans.query.filter(Plans.geo_extent == query_scale).all()
-  else:
-      plans = Plans.query.all()
-  
-  return_data = []
-  for plan in plans:
-      return_data.append(plan.serialize())
-  data = {
-    "data": return_data
-  }
-  return jsonify(data)
+    """ Create data for table"""
+    # Get the parameters
+    query_scale = request.args.get("scale")
+    query_timeframe = request.args.get("timeframe")
+    query_priority = request.args.get("priority")
+    
+    # Chain the filters and add in conditionals
+    plan_query = Plans.query
+
+    if query_scale and query_scale != "ALL" :
+        if query_scale == "SE":
+            query_scale = "Regional"
+        plan_query = plan_query.filter(Plans.geo_extent == query_scale)
+    else:
+        plan_query = plan_query
+    
+    if query_timeframe and query_timeframe != "all":
+        if query_timeframe == "within5":
+            plan_query = plan_query.filter(Plans.plan_timeframe >= str(2017))
+        elif query_timeframe == "within10":
+            plan_query = plan_query.filter(Plans.plan_timeframe >= str(2012))
+        elif query_timeframe == "over10":
+            plan_query = plan_query.filter(Plans.plan_timeframe < str(2012))
+    else:
+        plan_query = plan_query
+
+    if query_priority and query_priority != "all":
+        if query_priority == "wq":
+            plan_query = plan_query.filter(Plans.water_quality != None)
+        elif query_priority == "hs":
+            plan_query = plan_query.filter(Plans.habitat != None)
+        elif query_priority == "rs":
+            plan_query = plan_query.filter(Plans.resources_species != None)
+        elif query_priority == "cs":
+            plan_query = plan_query.filter(Plans.community_resilience != None)
+        elif query_priority == "er":
+            plan_query = plan_query.filter(Plans.ecosystem_resilience != None)
+        elif query_priority == "ge":
+            plan_query = plan_query.filter(Plans.gulf_economy != None)
+    else:
+        plan_query = plan_query
+
+    # Call all() to evaluate the query
+    plans = plan_query.all()
+
+    return_data = []
+    for plan in plans:
+        return_data.append(plan.serialize())
+    data = {
+        "data": return_data
+    }
+    return jsonify(data)
 
 ###########Error handling#####################
 
@@ -437,36 +475,47 @@ def show_contactus_page():
 
 ###############Map geojson##################
 
-# @app.route('/get_map_data')
-# def get_map_data():
-#     print(request.args.get("scale"))
-#     if not request.args.get("scale") or request.args.get("scale")=="States":
-#         geometries = Geom.query.filter(Geom.name.in_(["TX","LA","AL","MS","FL"])).all()
-#     else:
-#         query_scale = request.args.get("scale")
-#         geometries = Geom.query.filter(Geom.scale == query_scale).all()
-  
-#     return_data = []
-#     for geometry in geometries:
-#       return_data.append(geometry.serialize())
-#     data = {
-#       "data": return_data
-#     }
 
-#     return jsonify(data)
+@app.route('/get_map_data')
+def get_map_data():
+    query_scale = request.args.get("scale")
+    if not query_scale or query_scale == "States":
+        geometries = Geom.query.filter(Geom.name.in_(["TX","LA","AL","MS","FL"])).all()
+    else:
+        geometries = Geom.query.filter(Geom.scale == query_scale).all()
+  
+    return_data = []
+    for geometry in geometries:
+      return_data.append(geometry.serialize())
+    data = {
+      "data": return_data
+    }
+    return jsonify(data)
 
 @app.route('/spatial_query')
 def spatial_query():
+    # Get the parameters
+    query_lng = request.args.get("lng")
+    query_lat = request.args.get("lat")
+
     content = {
         "type": "Point",
-        "coordinates": [request.args.get("lng"),request.args.get("lat")]
+        "coordinates": [query_lng,query_lat]
     }
     content = json.dumps(content)
-    query = Geom.query.filter(func.ST_Intersects(func.ST_GeomFromGeoJSON(Geom.coords), func.ST_GeomFromGeoJSON(content))).all()
+
+    geom_query = Geom.query.filter(func.ST_Intersects(func.ST_GeomFromGeoJSON(Geom.coords), func.ST_GeomFromGeoJSON(content))).all()
     matchedgeom = []
-    for geom in query:
+    for geom in geom_query:
         matchedgeom.append(geom.name)
-    plans = Plans.query.filter(Plans.related_state.in_(matchedgeom)).order_by(Plans.id).all()
+    
+    # Chain the filters and add in conditionals
+    plan_query = Plans.query
+    plan_query = plan_query.filter(Plans.related_state.in_(matchedgeom)).order_by(Plans.id)
+
+    # Call all() to evaluate the query
+    plans = plan_query.all()
+   
     return_data = []
     for plan in plans:
       return_data.append(plan.serialize())
@@ -526,8 +575,6 @@ class PlanView(CustomView):
         ('commited','Commited')
         ]
     }
-
-
 
 admin.add_view(UserView(User, db.session))
 admin.add_view(PlanView(Plans, db.session))
