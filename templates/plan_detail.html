@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}
+Plan detail
+{% endblock %}
+{%block additionalcss %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.1/css/all.min.css">
+<style>
+    .fas {
+        color: rgb(185, 180, 180);
+    }
+
+    .liked {
+        color: burlywood;
+    }
+
+    /* Tooltip text */
+    .tooltiptext {
+        visibility: hidden;
+        width: 120px;
+        background-color: gainsboro;
+        color: black;
+        text-align: center;
+        padding: 5px 0;
+        border-radius: 6px;
+
+        /* Position the tooltip text - see examples below! */
+        position: absolute;
+        z-index: 1;
+    }
+
+    /* Show the tooltip text when you mouse over the tooltip container */
+    .fas:hover .tooltiptext {
+        visibility: visible;
+    }
+
+</style>
+{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="jumbotron">
+        <h1 class="h3">{{plan.plan_name}}</h1>
+        <p class="lead">
+            Agency Lead: {{plan.agency_lead}}
+            {% if "curr_user" in session %}
+            {% if liked %}
+            <i class="fas fa-star liked"><span class="tooltiptext">Add to your favorites</span></i>
+            {% else %}
+            <i class="fas fa-star"><span class="tooltiptext">Add to your favorites</span></i>
+            {% endif %}
+            {% endif %}
+        </p>
+        <hr class="my-4">
+        <h4>Basic information:</h4>
+        <ul style="column-count: 2;">
+            <li>Plan Resolution: {{plan.plan_resolution}}</li>
+            <li>Planning Method: {{plan.planning_method}}</li>
+            <li>Plan Time Frame: {{plan.plan_timeframe}}</li>
+            <li>Geo Extent: {{plan.geo_extent}}</li>
+            <li>Planning Method: {{plan.planning_method}}</li>
+        </ul>
+
+        <hr class="my-4">
+        <h4>Conservation method:</h4>
+        <table class="table table-sm table-light">
+            <thead>
+                <tr>
+                    <th scope="col">Acquisition</th>
+                    <th scope="col">Easement</th>
+                    <th scope="col">Stewardship</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{plan.acquisition}}</td>
+                    <td>{{plan.easement}}</td>
+                    <td>{{plan.stewardship}}</td>
+                </tr>
+            </tbody>
+        </table>
+        <hr class="my-4">
+        <h4>RESTORE Goal Framework: </h4>
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">Goal</th>
+                    <th scope="col">Information</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Habitat</td>
+                    <td>{{plan.habitat}}</td>
+                </tr>
+                <tr>
+                    <td>Water Quality</td>
+                    <td>{{plan.water_quality}}</td>
+                </tr>
+                <tr>
+                    <td>Resources & Species</td>
+                    <td>{{plan.resources_species}}</td>
+                </tr>
+                <tr>
+                    <td>Community Resilience</td>
+                    <td>{{plan.community_resilience}}</td>
+                </tr>
+                <tr>
+                    <td>Ecosystem Resilience</td>
+                    <td>{{plan.ecosystem_resilience}}</td>
+                </tr>
+                <tr>
+                    <td>Gulf Economy</th>
+                    <td>{{plan.gulf_economy}}</td>
+                </tr>
+            </tbody>
+        </table>
+        {% if 'static/assets/' in plan.plan_url %}
+        <a class="btn btn-primary btn-lg" href="https://s3.amazonaws.com/planinventory/{{plan.plan_url}}">Raw
+            Document</a>
+        {% else %}
+        <a class="btn btn-primary btn-lg" href="{{plan.plan_url}}">Raw Document</a>
+        {% endif %}
+        {% if "curr_user" in session %}
+        <a class="btn btn-success btn-lg" href="/plans/{{plan.id}}/update">Propose an edit</a>
+        {% endif %}
+        <hr class="my-2">
+        <div class="embed-responsive embed-responsive-16by9">
+            <iframe class="embed-responsive-item"
+                src="https://s3.amazonaws.com/planinventory/static/assets2/ref{{plan.id-1}}.pdf" allowfullscreen></iframe>
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block additionaljs %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    const likedIcon = document.querySelector(".fas")
+    likedIcon.addEventListener("click", function () {
+        axios.post('/plans/{{plan.id}}/like')
+        likedIcon.classList.toggle("liked");
+    })
+</script>
+{% endblock %}
