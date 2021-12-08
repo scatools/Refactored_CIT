@@ -1,4 +1,6 @@
 import os
+import base64
+
 from flask import Flask, render_template, redirect, session, flash, jsonify, request, g, url_for
 # from flask_debugtoolbar import DebugToolbarExtension
 from models import connect_db, db, User, Plans, NewPlans, Geom, Likes
@@ -6,15 +8,31 @@ from sqlalchemy.exc import IntegrityError
 from forms import RegisterForm, LoginForm, ChangePasswordFrom, UpdateForm, NewPlanForm
 from functools import wraps
 import geoalchemy2.functions as func
+
 import json
+import smtplib
+import datetime
+from itsdangerous.url_safe import URLSafeTimedSerializer
+
+import sqlalchemy
+from sqlalchemy.exc import IntegrityError
+
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 
+try: 
+    import config as cfg
+except:
+    print('Configs not imported')
+
 CURR_USER_KEY = "curr_user"
+DEFAULT_EMAIL_BODY = 'This email is from the SCA group project.'
 
 app = Flask(__name__)
 
+
+###################Configurations#############
 # work here! << this is where yo left off
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 #     'DATABASE_URL', 'postgres:///iop') # DATABASE_URL = url from 22nd line, iop should be cit
@@ -29,6 +47,11 @@ app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = "abc123"
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# Email configurations for email sendoffs.
+gmail_user = cfg.APP_USER
+gmail_password = cfg.APP_PASSWORD
+email_reviewer = cfg.APP_REVIEWER
 
 connect_db(app)
 
@@ -70,7 +93,7 @@ def register_user():
             email = form.email.data
             first_name = form.first_name.data
             last_name = form.last_name.data
-            New_user = User.register(username=username,password=password,email=email,first_name=first_name,last_name=last_name)
+            New_user = User.register(username=username, password=password,email=email,first_name=first_name,last_name=last_name)
             db.session.add(New_user)
             db.session.commit()
             session[CURR_USER_KEY]=New_user.username
@@ -96,7 +119,7 @@ def login_user():
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
-        user = User.authenticate(username=username,password=password)
+        user = User.authenticate(username=username, password=password)
         if(user):
             session[CURR_USER_KEY]=user.username
             if user.is_admin == True:
@@ -133,7 +156,6 @@ def delete_user(username):
         session.pop(CURR_USER_KEY)
     return redirect("/")
    
-    
 @app.route("/logout", methods= ["POST"])
 def logout():
     """Logs user out and redirects to homepage."""
@@ -141,14 +163,12 @@ def logout():
 
     return redirect("/")
 
-
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
 
     form = UpdateForm(obj= g.user)
     if form.validate_on_submit():
-        print("we reach to here!!!!!")
         if(User.authenticate(g.user.username, form.password.data)):
             if(form.email.data):
                 g.user.email = form.email.data
@@ -156,7 +176,6 @@ def profile():
                 g.user.first_name = form.first_name.data
             if(form.last_name.data):
                 g.user.last_name= form.last_name.data
-            print("we reach to here now!!!!!")
             db.session.add(g.user)
             db.session.commit()
             return redirect(url_for('view_user_detail',username =g.user.username))
@@ -180,10 +199,78 @@ def change_password():
             db.session.commit()
             return redirect(url_for('view_user_detail',username =g.user.username))
         else:
-            flash("Wrong password", "danger")
             return redirect(url_for('homepage'))
     return render_template('user/changepassword.html', form=form)
 
+###################Emails#############
+class Emails():
+
+    def __init__(self, 
+                 sent_from = gmail_user, 
+                 gmail_password = gmail_password, 
+                 to = [email_reviewer]):
+
+        self.sent_from = sent_from
+        self.gmail_password = gmail_password.encode('utf-8')
+        self.gmail_password = base64.b64encode(self.gmail_password)
+
+        self.timed_safe_serial = URLSafeTimedSerializer('new_plan_confirmation')
+
+        self.to = to
+        self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
+        self.email_text = ''
+
+
+
+    def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
+        form = NewPlanForm()
+
+        body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
+        body += '\n This is a test email from Python Dev App.'
+        body += '\n user request: ' + new_plan.username
+        body += '\n plan name: ' + new_plan.plan_name
+        body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
+        body += '\n plan link: ' + new_plan.plan_url
+
+        # DEV Include a link.
+        body += '\n\n Click this link to confirm new plan and add to the database: '
+        body += '\n\n url safe timed serializer:' + self.timed_safe_serial.dumps([1])
+
+        email_text = """
+        From: %s
+        To: %s
+        Subject: %s
+        %s
+        """ % (self.sent_from, ", ".join(self.to), self.subject, body)
+        self.email_text = email_text
+
+
+        # request.method == 'POST':
+
+        # Protecting Proprietary or Sensitive Information.
+        ## Some plan review has already happened. 
+        ## Endangered species locations.
+        ## How to review proprietary and sensitive information....
+        ## Maybe include a disclaimer in the message.
+
+
+    # @app.route('/login', methods=['POST']) 
+    def email_send(self, new_plan):
+        try:
+            self.email_body(new_plan)
+
+            smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+            smtp_server.ehlo()
+            smtp_server.login(self.sent_from, base64.b64decode(self.gmail_password).decode())
+            smtp_server.sendmail(self.sent_from, self.to, self.email_text)
+
+            smtp_server.close()
+            print ("Email sent successfully!")
+            return True
+
+        except Exception as ex:
+            print ("Something went wrong….", ex)
+            return False
 
 #################New plan#####################
 
@@ -191,6 +278,8 @@ def change_password():
 def add_plan(username):
     """User plan form and handing add plan"""
     form = NewPlanForm()
+    email = Emails()
+
     if form.validate_on_submit():
         plan_name = form.plan_name.data
         plan_url = form.plan_url.data
@@ -210,6 +299,12 @@ def add_plan(username):
         gulf_economy = form.gulf_economy.data,
         related_state = form.related_state.data
 
+        # JL: use above information to include in the email.
+        # /new-plan/validate/, methods = ["POST"]
+        # then in the body you'll have some information, plan name, blah blah blah
+        # this information will be as a post.  
+        # gmail for developers: 
+
         new_plan = NewPlans(plan_name =plan_name,
                             plan_url = plan_url,
                             plan_resolution=plan_resolution, 
@@ -228,10 +323,23 @@ def add_plan(username):
                             gulf_economy = gulf_economy,
                             related_state =related_state,
                             username = username)
-        db.session.add(new_plan)
-        db.session.commit()
-        return redirect(f"/users/{new_plan.username}")
+        
+
+        # Implement email notification
+        try:
+            email_success = email.email_send(new_plan)
+
+            if email_success:
+                # Maybe redirect to an error page.
+                db.session.add(new_plan)
+                db.session.commit()
+        finally: 
+            # JL: no matter what we re-direct.
+            # Front end might want to add a success or fail message though.
+            return redirect(f"/users/{new_plan.username}")
+
     else:
+        # JL: 
         if (not session.get(CURR_USER_KEY)):
             return redirect("/401")
         elif session.get(CURR_USER_KEY)!=username and session.get("admin")==False:
@@ -330,7 +438,7 @@ def like_plan(plan_id):
 
         db.session.commit()
 
-        return jsonify({'msg': "done"})
+        return jsonify({'msg': "done"}) 
 
 @app.route('/plans/<int:plan_id>/update',methods=["GET","POST"])
 def update_plan(plan_id):
@@ -581,4 +689,4 @@ admin.add_view(PlanView(Plans, db.session))
 admin.add_view(PlanView(NewPlans, db.session))
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
