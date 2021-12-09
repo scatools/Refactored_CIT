@@ -41,7 +41,7 @@ app = Flask(__name__)
 
 # URI must start with postgresql since SQLAlchemy has removed the support for postgres
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:password@localhost:5432/cit_seed'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://slgemdemkpkynn:d08fac0fcaadc3122977ceafda543a19c93cf73efeba65ea3b21b305eeaea694@ec2-3-211-228-251.compute-1.amazonaws.com:5432/d7r5ouk3pjk073'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = "abc123"
