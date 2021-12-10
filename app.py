@@ -45,7 +45,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = 'postgres://jykztlfyiujmsg:bbe0ddc19b722
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = 'abc123'
-app.config["DEBUG_TB_INTERCEPT_REDIRECTS"]=False
+app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
+
 
 # Email configurations for email sendoffs.
 gmail_user = cfg.APP_USER
@@ -204,25 +205,42 @@ def change_password():
 ###################Emails#############
 class Emails():
 
+    # Serializer.
+    serializer = URLSafeTimedSerializer('new_plan_confirmation')
+ 
     def __init__(self, 
                  sent_from = gmail_user, 
                  gmail_password = gmail_password, 
                  to = [email_reviewer]):
 
         self.sent_from = sent_from
-        self.gmail_password = gmail_password.encode('utf-8')
-        self.gmail_password = base64.b64encode(self.gmail_password)
-
-        self.timed_safe_serial = URLSafeTimedSerializer('new_plan_confirmation')
+        self.gmail_password = base64.b64encode(gmail_password.encode('utf-8'))
 
         self.to = to
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         self.email_text = ''
 
-
-
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
+
+        # print('line 223')
         form = NewPlanForm()
+
+        print('line 225')
+        # >> THE PROBLEM IS RIGHT HERE.
+        # DEV NOTE: this is almoost what we want. now it has to be made time-sensitive and hit the right endpoint.
+        # Create a token. The salt is here just in case.
+        # to_tokenize = request.form['email']
+        # token = self.serializer.dumps(to_tokenize, salt='add-new-plan-confirm')
+        # dev note: maybe do develop that here because when the email body is trigged,
+        # that's when we want a serializable token
+        # next see `confirm_email` 
+        token = Emails.serializer.dumps([1])
+
+        print('line 227')
+        
+        confirmation_link = url_for('confirm_email', token=token, external=True)
+        confirmation_link = 'http://127.0.0.1:5000' + confirmation_link
+        print('line 229')
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -231,10 +249,9 @@ class Emails():
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
         body += '\n plan link: ' + new_plan.plan_url
 
-        # DEV Include a link.
-        body += '\n\n Click this link to confirm new plan and add to the database: '
-        body += '\n\n url safe timed serializer:' + self.timed_safe_serial.dumps([1])
-
+        print('line 233')
+        body += '\n\n Click this link to confirm new plan and add to the database: {}'.format(confirmation_link)
+    
         email_text = """
         From: %s
         To: %s
@@ -242,26 +259,33 @@ class Emails():
         %s
         """ % (self.sent_from, ", ".join(self.to), self.subject, body)
         self.email_text = email_text
-
-
+        print('line 244')
         # request.method == 'POST':
 
+        
         # Protecting Proprietary or Sensitive Information.
         ## Some plan review has already happened. 
         ## Endangered species locations.
         ## How to review proprietary and sensitive information....
         ## Maybe include a disclaimer in the message.
 
-
-    # @app.route('/login', methods=['POST']) 
     def email_send(self, new_plan):
         try:
+            print('line 259')
+             
+            # ERROR IS RIGHT HERE
+
+            # might have to do tokenization here
             self.email_body(new_plan)
 
+            ##
+            print('line 260')
             smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             smtp_server.ehlo()
+            print('line 262')
             smtp_server.login(self.sent_from, base64.b64decode(self.gmail_password).decode())
             smtp_server.sendmail(self.sent_from, self.to, self.email_text)
+            print('line 262')
 
             smtp_server.close()
             print ("Email sent successfully!")
@@ -270,6 +294,16 @@ class Emails():
         except Exception as ex:
             print ("Something went wrong….", ex)
             return False
+    
+    @app.route('/confirm_email/<token>')
+    def confirm_email(token):
+        # YAH >>email_text
+        print('token works!')
+        Emails.serializer.loads(token, max_age=1000)
+        return redirect(f"/users/{new_plan.username}")
+        
+
+
 
 #################New plan#####################
 
@@ -330,6 +364,8 @@ def add_plan(username):
 
             if email_success:
                 # Maybe redirect to an error page.
+                # THIS will e implemented elsewhere as a whoel functionality. 
+                # thus the posting triggered by the link will trigger this  job down here
                 db.session.add(new_plan)
                 db.session.commit()
         finally: 
@@ -554,7 +590,7 @@ def show_contactus_page():
 #     else:
 #         query_scale = request.args.get("scale")
 #         geometries = Geom.query.filter(Geom.scale == query_scale).all()
-  
+
 #     return_data = []
 #     for geometry in geometries:
 #       return_data.append(geometry.serialize())
