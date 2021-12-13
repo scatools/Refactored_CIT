@@ -12,6 +12,7 @@ import geoalchemy2.functions as func
 import json
 import smtplib
 import datetime
+from itsdangerous import SignatureExpired
 from itsdangerous.url_safe import URLSafeTimedSerializer
 
 import sqlalchemy
@@ -297,11 +298,19 @@ class Emails():
     
     @app.route('/confirm_email/<token>')
     def confirm_email(token):
-        # YAH >>email_text
-        print('token works!')
-        Emails.serializer.loads(token, max_age=1000)
-        return redirect(f"/users/{new_plan.username}")
-        
+
+        try: 
+            Emails.serializer.loads(token, max_age=1000)
+
+            db.session.add(new_plan)
+            db.session.commit()
+
+        except SignatureExpired:
+            
+            return '<h1> The token is expired! </h1>'
+
+        return '<h1>  The plans have been added. </h1>'
+
 
 
 
@@ -360,17 +369,17 @@ def add_plan(username):
 
         # Implement email notification
         try:
-            email_success = email.email_send(new_plan)
+            email.email_send(new_plan)
 
-            if email_success:
+            # if email_success:
                 # Maybe redirect to an error page.
                 # THIS will e implemented elsewhere as a whoel functionality. 
                 # thus the posting triggered by the link will trigger this  job down here
-                db.session.add(new_plan)
-                db.session.commit()
+  
         finally: 
             # JL: no matter what we re-direct.
             # Front end might want to add a success or fail message though.
+            # May want a check email message sent??
             return redirect(f"/users/{new_plan.username}")
 
     else:
