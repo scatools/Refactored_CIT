@@ -63,7 +63,6 @@ class User(db.Model):
         return False
     
 
-
 class Plans(db.Model):
     """Class to refer to plans"""
 
@@ -136,6 +135,7 @@ class NewPlans(db.Model):
     is_new = db.Column(db.Boolean, nullable=False, default=True)
     existing_planid = db.Column(db.Integer, db.ForeignKey('plans.id', ondelete="cascade"))
     username = db.Column(db.String(20), db.ForeignKey('users.username'), nullable=False)
+    published = db.Column(db.Boolean, nullable=False, default=False)
 
     existing_plan = db.relationship('Plans')
 
@@ -161,7 +161,8 @@ class NewPlans(db.Model):
             'status':self.status,
             'is_new':self.is_new,
             'existing_planid':self.existing_planid,
-            'username':self.username
+            'username':self.username,
+            'published':self.published,
         }
 
 class Geom(db.Model):

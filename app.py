@@ -212,7 +212,8 @@ class Emails():
     def __init__(self, 
                  sent_from = gmail_user, 
                  gmail_password = gmail_password, 
-                 to = [email_reviewer]):
+                 to = [email_reviewer],
+                 ):
 
         self.sent_from = sent_from
         self.gmail_password = base64.b64encode(gmail_password.encode('utf-8'))
@@ -221,27 +222,41 @@ class Emails():
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         self.email_text = ''
 
+        # self.new_plan = new_plan
+    
+    # @
+    # def 
+    # Create plan confirmation page workflow 
+#     @app.route('/users/<plan_id>/delete', methods = ["POST"])
+#     def delete_user(username):
+    #     """delete a user"""
+    #     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
+    #         user = User.query.get_or_404(username)
+    #         db.session.delete(user)
+    #         db.session.commit()
+    #         session.pop(CURR_USER_KEY)
+#     return redirect("/")'
+
+# @app.route('/users/<username>')
+# def view_user_detail(username):
+#     """Show user detail"""
+#     print(session[CURR_USER_KEY])
+#     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
+#         user = User.query.get_or_404(session[CURR_USER_KEY])
+#         return render_template("/user/user_detail.html", user= user)
+#     else:
+#         return redirect("/401")
+
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
 
-        # print('line 223')
         form = NewPlanForm()
 
-        print('line 225')
-        # >> THE PROBLEM IS RIGHT HERE.
-        # DEV NOTE: this is almoost what we want. now it has to be made time-sensitive and hit the right endpoint.
-        # Create a token. The salt is here just in case.
-        # to_tokenize = request.form['email']
-        # token = self.serializer.dumps(to_tokenize, salt='add-new-plan-confirm')
-        # dev note: maybe do develop that here because when the email body is trigged,
-        # that's when we want a serializable token
-        # next see `confirm_email` 
-        token = Emails.serializer.dumps([1])
-
-        print('line 227')
+        # token = Emails.serializer.dumps()
+        token = Emails.serializer.dumps(new_plan.serialize())
         
+        link_head = 'http://127.0.0.1:5000'
         confirmation_link = url_for('confirm_email', token=token, external=True)
-        confirmation_link = 'http://127.0.0.1:5000' + confirmation_link
-        print('line 229')
+        confirmation_link = link_head + confirmation_link
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -249,8 +264,6 @@ class Emails():
         body += '\n plan name: ' + new_plan.plan_name
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
         body += '\n plan link: ' + new_plan.plan_url
-
-        print('line 233')
         body += '\n\n Click this link to confirm new plan and add to the database: {}'.format(confirmation_link)
     
         email_text = """
@@ -260,10 +273,7 @@ class Emails():
         %s
         """ % (self.sent_from, ", ".join(self.to), self.subject, body)
         self.email_text = email_text
-        print('line 244')
-        # request.method == 'POST':
 
-        
         # Protecting Proprietary or Sensitive Information.
         ## Some plan review has already happened. 
         ## Endangered species locations.
@@ -272,21 +282,13 @@ class Emails():
 
     def email_send(self, new_plan):
         try:
-            print('line 259')
-             
-            # ERROR IS RIGHT HERE
 
-            # might have to do tokenization here
             self.email_body(new_plan)
 
-            ##
-            print('line 260')
             smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             smtp_server.ehlo()
-            print('line 262')
             smtp_server.login(self.sent_from, base64.b64decode(self.gmail_password).decode())
             smtp_server.sendmail(self.sent_from, self.to, self.email_text)
-            print('line 262')
 
             smtp_server.close()
             print ("Email sent successfully!")
@@ -295,18 +297,21 @@ class Emails():
         except Exception as ex:
             print ("Something went wrong….", ex)
             return False
+ 
     
     @app.route('/confirm_email/<token>')
     def confirm_email(token):
 
         try: 
-            Emails.serializer.loads(token, max_age=1000)
-
-            db.session.add(new_plan)
+            # Max age is in seconds. 
+            Emails.serializer.loads(token, max_age=10000)
+             
+            print('making the push to the database')
+            db.session.add()
             db.session.commit()
 
         except SignatureExpired:
-            
+            #Token is expired works!!
             return '<h1> The token is expired! </h1>'
 
         return '<h1>  The plans have been added. </h1>'
@@ -314,9 +319,9 @@ class Emails():
 
 
 
-#################New plan#####################
+#################New plan##################### ,.m, 
 
-@app.route('/users/<username>/plan/add',methods=["GET","POST"])
+@app.route('/users/<username>/plan/add', methods=["GET","POST"])
 def add_plan(username):
     """User plan form and handing add plan"""
     form = NewPlanForm()
@@ -364,14 +369,22 @@ def add_plan(username):
                             ecosystem_resilience=ecosystem_resilience,
                             gulf_economy = gulf_economy,
                             related_state =related_state,
-                            username = username)
-        
+                            username = username,
+                            published = False,
+                            )
 
+        # Add new plan here.
+        # Persist database but have a verified or not column (boolean). 
+        db.session.add(new_plan)
+        db.session.commit()
+        
         # Implement email notification
         try:
-            email.email_send(new_plan)
-
-            # if email_success:
+            email_success = email.email_send(new_plan)
+            if email_success:
+                flash('Email has been sent for approval to the committee.')
+            else:
+                flash('Email confirmation has failed while submitting new plans!')
                 # Maybe redirect to an error page.
                 # THIS will e implemented elsewhere as a whoel functionality. 
                 # thus the posting triggered by the link will trigger this  job down here
