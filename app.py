@@ -41,8 +41,8 @@ app = Flask(__name__)
 # you're going to have to set the global link 
 #
 # Locally
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@127.0.0.1/cit'
-app.config["SQLALCHEMY_DATABASE_URI"] = 'postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@127.0.0.1/cit_restart'
+# app.config["SQLALCHEMY_DATABASE_URI"] = 'postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = 'abc123'
@@ -252,11 +252,11 @@ class Emails():
         form = NewPlanForm()
 
         # token = Emails.serializer.dumps()
-        token = Emails.serializer.dumps(new_plan.serialize())
+        # token = Emails.serializer.dumps(new_plan.serialize())
         
         link_head = 'http://127.0.0.1:5000'
-        confirmation_link = url_for('confirm_email', token=token, external=True)
-        confirmation_link = link_head + confirmation_link
+        # confirmation_link = url_for('confirm_email', token=token, external=True)
+        confirmation_link = link_head #+ confirmation_link
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -299,22 +299,22 @@ class Emails():
             return False
  
     
-    @app.route('/confirm_email/<token>')
-    def confirm_email(token):
+    # @app.route('/confirm_email/<token>')
+    # def confirm_email(token):
 
-        try: 
-            # Max age is in seconds. 
-            Emails.serializer.loads(token, max_age=10000)
+    #     try: 
+    #         # Max age is in seconds. 
+    #         Emails.serializer.loads(token, max_age=10000)
              
-            print('making the push to the database')
-            db.session.add()
-            db.session.commit()
+    #         print('making the push to the database')
+    #         db.session.add()
+    #         db.session.commit()
 
-        except SignatureExpired:
-            #Token is expired works!!
-            return '<h1> The token is expired! </h1>'
+    #     except SignatureExpired:
+    #         #Token is expired works!!
+    #         return '<h1> The token is expired! </h1>'
 
-        return '<h1>  The plans have been added. </h1>'
+    #     return '<h1>  The plans have been added. </h1>'
 
 
 
@@ -370,7 +370,6 @@ def add_plan(username):
                             gulf_economy = gulf_economy,
                             related_state =related_state,
                             username = username,
-                            published = False,
                             )
 
         # Add new plan here.
@@ -463,6 +462,27 @@ def remove_newplan(plan_id):
             db.session.delete(new_plan)
             db.session.commit()
         return redirect(f"/users/{session[CURR_USER_KEY]}")
+
+# ## YaH
+# ## writing a new route for changing the status of a new plan
+# @app.route('/validate/<plan_id>/<status_update>',methods= ["POST"])
+# def validate_plan(plan_id, status_update):
+#     """validate or reject a new plan"""
+
+#     # validate text of status_update here:
+    
+#     if(not session.get(CURR_USER_KEY)):
+#         # redirect to login page 
+#         return redirect("/login")
+#     if (not session.get('admin')):
+#         return redirect('/401')
+    
+#     new_plan = NewPlans.query.get_or_404(plan_id)
+#     new_plan.status = status_update
+
+#     db.session.save(new_plan)
+#     db.session.commit()
+#     return redirect(f"/users/{session[CURR_USER_KEY]}")
 
 #################Plan#########################
 @app.route('/plans/<int:plan_id>')
@@ -696,7 +716,7 @@ class PlanView(CustomView):
 
 admin.add_view(UserView(User, db.session))
 admin.add_view(PlanView(Plans, db.session))
-admin.add_view(PlanView(NewPlans, db.session))
+# admin.add_view(PlanView(NewPlans, db.session))
 
 if __name__ == '__main__':
     app.run(debug=True)
