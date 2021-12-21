@@ -249,14 +249,15 @@ class Emails():
 
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
 
-        form = NewPlanForm()
-
-        # token = Emails.serializer.dumps()
+        #  token = Emails.serializer.dumps()
         # token = Emails.serializer.dumps(new_plan.serialize())
         
         link_head = 'http://127.0.0.1:5000'
         # confirmation_link = url_for('confirm_email', token=token, external=True)
-        confirmation_link = link_head #+ confirmation_link
+
+        # Dev note: Later here we will have an accept link and a deny link.
+        confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed')
+        confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected')
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -264,14 +265,18 @@ class Emails():
         body += '\n plan name: ' + new_plan.plan_name
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
         body += '\n plan link: ' + new_plan.plan_url
-        body += '\n\n Click this link to confirm new plan and add to the database: {}'.format(confirmation_link)
+
+        body += '''
+        \n Note: if a plan is accepted, it will be visible to all product users and the public.
+        This is reversible.'''
+
+        # YAH
+        body += '\n\n TO CONFIRM THE PLAN Click this link: {}'.format(confirmation_link_accept)
+        body += '\n\n TO REJECT THE PLAN: Click this link: {}'.format(confirmation_link_reject)
     
         email_text = """
-        From: %s
-        To: %s
-        Subject: %s
         %s
-        """ % (self.sent_from, ", ".join(self.to), self.subject, body)
+        """ % (body)
         self.email_text = email_text
 
         # Protecting Proprietary or Sensitive Information.
@@ -315,7 +320,6 @@ class Emails():
     #         return '<h1> The token is expired! </h1>'
 
     #     return '<h1>  The plans have been added. </h1>'
-
 
 
 
@@ -376,6 +380,7 @@ def add_plan(username):
         # Persist database but have a verified or not column (boolean). 
         db.session.add(new_plan)
         db.session.commit()
+        
         
         # Implement email notification
         try:
@@ -463,26 +468,41 @@ def remove_newplan(plan_id):
             db.session.commit()
         return redirect(f"/users/{session[CURR_USER_KEY]}")
 
-# ## YaH
-# ## writing a new route for changing the status of a new plan
-# @app.route('/validate/<plan_id>/<status_update>',methods= ["POST"])
-# def validate_plan(plan_id, status_update):
-#     """validate or reject a new plan"""
+## YaH: writing a new route for changing the status of a new plan
+@app.route('/validate/<plan_id>/<update_state>')
+def validate_plan(plan_id, update_state):
+    """Validate or reject a new plan"""
 
-#     # validate text of status_update here:
-    
-#     if(not session.get(CURR_USER_KEY)):
-#         # redirect to login page 
-#         return redirect("/login")
-#     if (not session.get('admin')):
-#         return redirect('/401')
-    
-#     new_plan = NewPlans.query.get_or_404(plan_id)
-#     new_plan.status = status_update
 
-#     db.session.save(new_plan)
-#     db.session.commit()
-#     return redirect(f"/users/{session[CURR_USER_KEY]}")
+    if(not session.get(CURR_USER_KEY) or not session.get("admin")==True):
+        return redirect("/401")
+ 
+    if not plan_id.isnumeric():
+        return redirect('/401')
+    if update_state!='rejected' or update_state!='committed':
+        return redirect('/401')
+
+    # NOTE: check the state here. If we alreayd have a reject, we can't just click accept. 
+    # This should be true vice versa.
+
+    # Also if it's not one of the only two keywords, we should flat out reject this.
+
+    if(not session.get(CURR_USER_KEY)):
+        # redirect to login page 
+        return redirect("/login")
+    if (not session.get('admin')):
+        return redirect('/401')
+    
+    # JL: 'first get the page to pop-up, then we work on the rest'
+    # new_plan = NewPlans.query.get_or_404(plan_id)
+    # new_plan.status = status_update
+
+    new_plan = NewPlans.query.get_or_404(plan_id)
+    id=db.Column(db.Integer,primary_key=True,autoincrement=True)
+    new_plan.status = update_state
+    db.session.commit()
+        
+    return redirect(f"/users/{session[CURR_USER_KEY]}")
 
 #################Plan#########################
 @app.route('/plans/<int:plan_id>')
@@ -695,7 +715,20 @@ class PlanView(CustomView):
         # can return any valid HTML e.g. a link to another view to show the detail or a popup window
         return model.plan_url[:20]
     can_view_details = True
-    column_exclude_list = ('habitat','water_quality','resources_species','community_resilience','ecosystem_resilience','gulf_economy','acquisition','easement','stewardship','plan_timeframe','plan_resolution')
+    column_exclude_list = (
+        'habitat',
+        'water_quality',
+        'resources_species',
+        'community_resilience',
+        'ecosystem_resilience',
+        'gulf_economy',
+        'acquisition',
+        'easement',
+        'stewardship',
+        'plan_timeframe',
+        'plan_resolution'
+    )
+
     column_formatters = {
         'plan_url': _plan_url_formatter
     }
