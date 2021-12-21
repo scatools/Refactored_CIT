@@ -476,16 +476,14 @@ def validate_plan(plan_id, update_state):
 
     if(not session.get(CURR_USER_KEY) or not session.get("admin")==True):
         return redirect("/401")
- 
     if not plan_id.isnumeric():
         return redirect('/401')
-    if update_state!='rejected' or update_state!='committed':
-        return redirect('/401')
 
-    # NOTE: check the state here. If we alreayd have a reject, we can't just click accept. 
-    # This should be true vice versa.
-
-    # Also if it's not one of the only two keywords, we should flat out reject this.
+    # If don't have an acceptable rejected state, get it out of here. 
+    if not(update_state=="rejected" or update_state=="committed"):
+        print('update_state:', update_state)
+        print('type(update_state):', type(update_state))
+        return redirect('/error/401.html')
 
     if(not session.get(CURR_USER_KEY)):
         # redirect to login page 
@@ -498,7 +496,13 @@ def validate_plan(plan_id, update_state):
     # new_plan.status = status_update
 
     new_plan = NewPlans.query.get_or_404(plan_id)
-    id=db.Column(db.Integer,primary_key=True,autoincrement=True)
+
+    # NOTE: check the state here. If we alreayd have a reject, we can't just click accept. 
+    # This should be true vice versa.
+    if new_plan.status == "rejected" or new_plan.status == "accepted":
+        # Anthony/Ethan: let's make a page that says the plan has already been accepted or rejected.
+        return redirect('/error/401')
+        
     new_plan.status = update_state
     db.session.commit()
         
