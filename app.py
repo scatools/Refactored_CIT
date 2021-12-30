@@ -271,8 +271,8 @@ class Emails():
         This is reversible.'''
 
         # YAH
-        body += '\n\n TO CONFIRM THE PLAN Click this link: {}'.format(confirmation_link_accept)
-        body += '\n\n TO REJECT THE PLAN: Click this link: {}'.format(confirmation_link_reject)
+        body += '\n\n TO CONFIRM THE PLAN, click this link: {}'.format(confirmation_link_accept)
+        body += '\n\n TO REJECT THE PLAN, click this link: {}'.format(confirmation_link_reject)
     
         email_text = """
         %s
@@ -473,7 +473,6 @@ def remove_newplan(plan_id):
 def validate_plan(plan_id, update_state):
     """Validate or reject a new plan"""
 
-
     if(not session.get(CURR_USER_KEY) or not session.get("admin")==True):
         return redirect("/401")
     if not plan_id.isnumeric():
@@ -492,14 +491,12 @@ def validate_plan(plan_id, update_state):
         return redirect('/401')
     
     # JL: 'first get the page to pop-up, then we work on the rest'
-    # new_plan = NewPlans.query.get_or_404(plan_id)
-    # new_plan.status = status_update
-
+    # Get current state of the plan
     new_plan = NewPlans.query.get_or_404(plan_id)
 
     # NOTE: check the state here. If we alreayd have a reject, we can't just click accept. 
     # This should be true vice versa.
-    if new_plan.status == "rejected" or new_plan.status == "accepted":
+    if new_plan.status == "rejected" or new_plan.status == "committed":
         # Anthony/Ethan: let's make a page that says the plan has already been accepted or rejected.
         return redirect('/error/401')
         
