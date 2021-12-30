@@ -10,3 +10,6 @@ static/assets/
 
 # ipynb checkpoints
 /.ipynb_checkpoints/
+
+# ipynbs
+/*.ipynb
