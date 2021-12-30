@@ -12,8 +12,7 @@ import geoalchemy2.functions as func
 import json
 import smtplib
 import datetime
-from itsdangerous import SignatureExpired
-from itsdangerous.url_safe import URLSafeTimedSerializer
+from itsdangerous import SignatureExpired, URLSafeTimedSerializer
 
 import sqlalchemy
 from sqlalchemy.exc import IntegrityError
@@ -22,13 +21,12 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 
-try: 
-    import config as cfg
-except:
-    print('Configs not imported')
+import config as cfg
 
 CURR_USER_KEY = "curr_user"
 DEFAULT_EMAIL_BODY = 'This email is from the SCA group project.'
+SECRET_KEY = cfg.APP_SECRET_KEY
+MAX_AGE = 172800 # Seconds for 2 days.
 
 app = Flask(__name__)
 
@@ -42,12 +40,12 @@ app = Flask(__name__)
 #
 # Locally
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@127.0.0.1/cit_restart'
+# Globally
 # app.config["SQLALCHEMY_DATABASE_URI"] = 'postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = 'abc123'
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
-
 
 # Email configurations for email sendoffs.
 gmail_user = cfg.APP_USER
@@ -206,8 +204,7 @@ def change_password():
 ###################Emails#############
 class Emails():
 
-    # Serializer.
-    serializer = URLSafeTimedSerializer('new_plan_confirmation')
+    url_serializer = URLSafeTimedSerializer(SECRET_KEY, salt=b"new_plans_verify")
  
     def __init__(self, 
                  sent_from = gmail_user, 
@@ -221,43 +218,18 @@ class Emails():
         self.to = to
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         self.email_text = ''
-
-        # self.new_plan = new_plan
-    
-    # @
-    # def 
-    # Create plan confirmation page workflow 
-#     @app.route('/users/<plan_id>/delete', methods = ["POST"])
-#     def delete_user(username):
-    #     """delete a user"""
-    #     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
-    #         user = User.query.get_or_404(username)
-    #         db.session.delete(user)
-    #         db.session.commit()
-    #         session.pop(CURR_USER_KEY)
-#     return redirect("/")'
-
-# @app.route('/users/<username>')
-# def view_user_detail(username):
-#     """Show user detail"""
-#     print(session[CURR_USER_KEY])
-#     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
-#         user = User.query.get_or_404(session[CURR_USER_KEY])
-#         return render_template("/user/user_detail.html", user= user)
-#     else:
-#         return redirect("/401")
+        
 
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
 
-        #  token = Emails.serializer.dumps()
-        # token = Emails.serializer.dumps(new_plan.serialize())
+        token = Emails.url_serializer.dumps("verifying_new_plan")
         
         link_head = 'http://127.0.0.1:5000'
         # confirmation_link = url_for('confirm_email', token=token, external=True)
 
         # Dev note: Later here we will have an accept link and a deny link.
-        confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed')
-        confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected')
+        confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
+        confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -270,7 +242,6 @@ class Emails():
         \n Note: if a plan is accepted, it will be visible to all product users and the public.
         This is reversible.'''
 
-        # YAH
         body += '\n\n TO CONFIRM THE PLAN, click this link: {}'.format(confirmation_link_accept)
         body += '\n\n TO REJECT THE PLAN, click this link: {}'.format(confirmation_link_reject)
     
@@ -285,6 +256,7 @@ class Emails():
         ## How to review proprietary and sensitive information....
         ## Maybe include a disclaimer in the message.
 
+        
     def email_send(self, new_plan):
         try:
 
@@ -468,15 +440,20 @@ def remove_newplan(plan_id):
             db.session.commit()
         return redirect(f"/users/{session[CURR_USER_KEY]}")
 
+    
 ## YaH: writing a new route for changing the status of a new plan
-@app.route('/validate/<plan_id>/<update_state>')
-def validate_plan(plan_id, update_state):
+@app.route('/validate/<plan_id>/<update_state>/<token>')
+def validate_plan(plan_id, update_state, token):
     """Validate or reject a new plan"""
 
+    # Check user admin status and active session. 
     if(not session.get(CURR_USER_KEY) or not session.get("admin")==True):
         return redirect("/401")
     if not plan_id.isnumeric():
         return redirect('/401')
+    
+    # Check if user token is available.
+    data = Emails.url_serializer.loads(token, max_age=MAX_AGE)
 
     # If don't have an acceptable rejected state, get it out of here. 
     if not(update_state=="rejected" or update_state=="committed"):
