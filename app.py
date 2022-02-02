@@ -206,11 +206,14 @@ def change_password():
 
 ###################Emails#############
 class Emails():
+    
+    url_serializer = URLSafeTimedSerializer(SECRET_KEY, salt=b"new_plans_verify")
  
     def __init__(self, 
                  sent_from = gmail_user, 
                  gmail_password = gmail_password, 
-                 to = [email_reviewer]):
+                 to = [email_reviewer],
+                 ):
 
         self.sent_from = sent_from
         self.gmail_password = gmail_password.encode('utf-8')
@@ -222,8 +225,40 @@ class Emails():
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         self.email_text = ''
 
+        # self.new_plan = new_plan
+    
+    # @
+    # def 
+    # Create plan confirmation page workflow 
+#     @app.route('/users/<plan_id>/delete', methods = ["POST"])
+#     def delete_user(username):
+    #     """delete a user"""
+    #     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
+    #         user = User.query.get_or_404(username)
+    #         db.session.delete(user)
+    #         db.session.commit()
+    #         session.pop(CURR_USER_KEY)
+#     return redirect("/")'
+
+# @app.route('/users/<username>')
+# def view_user_detail(username):
+#     """Show user detail"""
+#     print(session[CURR_USER_KEY])
+#     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
+#         user = User.query.get_or_404(session[CURR_USER_KEY])
+#         return render_template("/user/user_detail.html", user= user)
+#     else:
+#         return redirect("/401")
+
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
-        form = NewPlanForm()
+       
+        token = Emails.url_serializer.dumps("verifying_new_plan")
+
+        link_head = 'http://127.0.0.1:5000'
+        
+        # Dev note: Later here we will have an accept link and a deny link.
+        confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
+        confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -232,18 +267,17 @@ class Emails():
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
         body += '\n plan link: ' + new_plan.plan_url
 
-        # DEV Include a link.
-        body += '\n\n Click this link to confirm new plan and add to the database: '
-        body += '\n\n url safe timed serializer:' + self.timed_safe_serial.dumps([1])
+        body += '''
+        \n Note: if a plan is accepted, it will be visible to all product users and the public. This is reversible.'''
+
+        body += '\n\n TO CONFIRM THE PLAN, click this link: {}'.format(confirmation_link_accept)
+        body += '\n\n TO REJECT THE PLAN, click this link: {}'.format(confirmation_link_reject)
     
         email_text = """
-        From: %s
-        To: %s
-        Subject: %s
         %s
-        """ % (self.sent_from, ", ".join(self.to), self.subject, body)
+        """ % (body)
         self.email_text = email_text
-        
+
         # Protecting Proprietary or Sensitive Information.
         ## Some plan review has already happened. 
         ## Endangered species locations.
@@ -265,6 +299,23 @@ class Emails():
 
         except Exception as ex:
             return False
+    
+#     @app.route('/confirm_email/<token>')
+#     def confirm_email(token):
+
+#         try: 
+#             # Max age is in seconds. 
+#             Emails.serializer.loads(token, max_age=10000)
+             
+#             print('making the push to the database')
+#             db.session.add()
+#             db.session.commit()
+
+#         except SignatureExpired:
+#             #Token is expired works!!
+#             return '<h1> The token is expired! </h1>'
+
+#         return '<h1>  The plans have been added. </h1>'
 
 #################New plan#####################
 
@@ -312,10 +363,16 @@ def add_plan(username):
                             community_resilience = community_resilience,
                             ecosystem_resilience = ecosystem_resilience,
                             gulf_economy = gulf_economy,
-                            related_state = related_state,
-                            username = username)
-        
+                            related_state =related_state,
+                            username = username,
+                            published = False,
+                            )
 
+        # Add new plan here.
+        # Persist database but have a verified or not column (boolean). 
+        db.session.add(new_plan)
+        db.session.commit()
+        
         # Implement email notification
         try:
             email.email_send(new_plan)
@@ -324,7 +381,6 @@ def add_plan(username):
                 # Maybe redirect to an error page. 
                 db.session.add(new_plan)
                 db.session.commit()
-                
         finally: 
             # JL: no matter what we re-direct.
             # Front end might want to add a success or fail message though.
@@ -399,6 +455,48 @@ def remove_newplan(plan_id):
             db.session.delete(new_plan)
             db.session.commit()
         return redirect(f"/users/{session[CURR_USER_KEY]}")
+
+    
+## YaH: writing a new route for changing the status of a new plan
+@app.route('/validate/<plan_id>/<update_state>/<token>')
+def validate_plan(plan_id, update_state, token):
+    """Validate or reject a new plan"""
+
+    # Check user admin status and active session. 
+    if(not session.get(CURR_USER_KEY) or not session.get("admin")==True):
+        return redirect("/401")
+    if not plan_id.isnumeric():
+        return redirect('/401')
+    
+    # Check if user token is available.
+    data = Emails.url_serializer.loads(token, max_age=MAX_AGE)
+
+    # If don't have an acceptable rejected state, get it out of here. 
+    if not(update_state=="rejected" or update_state=="committed"):
+        print('update_state:', update_state)
+        print('type(update_state):', type(update_state))
+        return redirect('/error/401.html')
+
+    if(not session.get(CURR_USER_KEY)):
+        # redirect to login page 
+        return redirect("/login")
+    if (not session.get('admin')):
+        return redirect('/401')
+    
+    # JL: 'first get the page to pop-up, then we work on the rest'
+    # Get current state of the plan
+    new_plan = NewPlans.query.get_or_404(plan_id)
+
+    # NOTE: check the state here. If we alreayd have a reject, we can't just click accept. 
+    # This should be true vice versa.
+    if new_plan.status == "rejected" or new_plan.status == "committed":
+        # Anthony/Ethan: let's make a page that says the plan has already been accepted or rejected.
+        return redirect('/error/401')
+        
+    new_plan.status = update_state
+    db.session.commit()
+        
+    return redirect(f"/users/{session[CURR_USER_KEY]}")
 
 #################Plan#########################
 @app.route('/plans/<int:plan_id>')
