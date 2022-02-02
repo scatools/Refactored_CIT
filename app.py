@@ -13,6 +13,7 @@ import geoalchemy2.functions as func
 import json
 import smtplib
 import datetime
+from itsdangerous import SignatureExpired
 from itsdangerous.url_safe import URLSafeTimedSerializer
 
 import sqlalchemy
@@ -222,7 +223,6 @@ class Emails():
         self.email_text = ''
 
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
-        
         form = NewPlanForm()
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
@@ -289,7 +289,7 @@ def add_plan(username):
         water_quality = form.water_quality .data,
         resources_species = form.resources_species.data,
         community_resilience = form.community_resilience.data,
-        ecosystem_resilience = form.ecosystem_resilience.data,
+        ecosystem_resilience = form.ecosystem_resiliece.data,
         gulf_economy = form.gulf_economy.data,
         related_state = form.related_state.data
 
@@ -318,15 +318,17 @@ def add_plan(username):
 
         # Implement email notification
         try:
-            email_success = email.email_send(new_plan)
+            email.email_send(new_plan)
 
             if email_success:
                 # Maybe redirect to an error page. 
                 db.session.add(new_plan)
                 db.session.commit()
+                
         finally: 
             # JL: no matter what we re-direct.
             # Front end might want to add a success or fail message though.
+            # May want a check email message sent??
             return redirect(f"/users/{new_plan.username}")
 
     else:
