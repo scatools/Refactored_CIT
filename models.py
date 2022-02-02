@@ -63,7 +63,6 @@ class User(db.Model):
         return False
     
 
-
 class Plans(db.Model):
     """Class to refer to plans"""
 
@@ -82,7 +81,7 @@ class Plans(db.Model):
     geo_extent = db.Column(db.Text)
     habitat = db.Column(db.Text)
     water_quality = db.Column(db.Text)
-    resources_species = db.Column(db.Text)
+    resource_species = db.Column(db.Text)
     community_resilience = db.Column(db.Text)
     ecosystem_resilience = db.Column(db.Text)
     gulf_economy = db.Column(db.Text)
@@ -102,7 +101,7 @@ class Plans(db.Model):
             'agency_lead':self.agency_lead,
             'habitat': self.habitat,
             'water_quality': self.water_quality,
-            'resources_species': self.resources_species,
+            'resource_species': self.resource_species,
             'community_resilience': self.community_resilience,
             'ecosystem_resilience': self.ecosystem_resilience,
             'gulf_economy':self.gulf_economy,
@@ -112,7 +111,9 @@ class Plans(db.Model):
 class NewPlans(db.Model):
     """Class to refer to plans"""
 
-    __tablename__="newplans"
+    __tablename__="plans"
+    __table_args__ = {'extend_existing': True} 
+    # __abstract__ = True
 
     id=db.Column(db.Integer,primary_key=True,autoincrement= True)
     plan_name = db.Column(db.Text, nullable= False)
@@ -127,7 +128,7 @@ class NewPlans(db.Model):
     geo_extent = db.Column(db.Text)
     habitat = db.Column(db.Text)
     water_quality = db.Column(db.Text)
-    resources_species = db.Column(db.Text)
+    resource_species = db.Column(db.Text)
     community_resilience = db.Column(db.Text)
     ecosystem_resilience = db.Column(db.Text)
     gulf_economy = db.Column(db.Text)
@@ -153,7 +154,7 @@ class NewPlans(db.Model):
             'agency_lead':self.agency_lead,
             'habitat': self.habitat,
             'water_quality': self.water_quality,
-            'resources_species': self.resources_species,
+            'resource_species': self.resource_species,
             'community_resilience': self.community_resilience,
             'ecosystem_resilience': self.ecosystem_resilience,
             'gulf_economy':self.gulf_economy,
@@ -161,7 +162,7 @@ class NewPlans(db.Model):
             'status':self.status,
             'is_new':self.is_new,
             'existing_planid':self.existing_planid,
-            'username':self.username
+            'username':self.username,
         }
 
 class Geom(db.Model):

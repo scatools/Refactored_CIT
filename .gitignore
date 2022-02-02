@@ -7,3 +7,9 @@ static/assets/
 
 # configs
 /configs/
+
+# ipynb checkpoints
+/.ipynb_checkpoints/
+
+# ipynbs
+/*.ipynb

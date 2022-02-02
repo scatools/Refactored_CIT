@@ -1,18 +1,20 @@
 import os
 import base64
+import logging
 
 from flask import Flask, render_template, redirect, session, flash, jsonify, request, g, url_for
 # from flask_debugtoolbar import DebugToolbarExtension
-from models import connect_db, db, User, Plans, NewPlans, Geom, Likes
-from sqlalchemy.exc import IntegrityError
+from models import connect_db, db, User,Plans,NewPlans,Geom,Likes
+
 from forms import RegisterForm, LoginForm, ChangePasswordFrom, UpdateForm, NewPlanForm
+
 from functools import wraps
 import geoalchemy2.functions as func
 
 import json
 import smtplib
 import datetime
-from itsdangerous.url_safe import URLSafeTimedSerializer
+from itsdangerous import SignatureExpired, URLSafeTimedSerializer
 
 import sqlalchemy
 from sqlalchemy.exc import IntegrityError
@@ -23,30 +25,29 @@ from flask_admin.menu import MenuLink
 
 try: 
     import config as cfg
-except:
-    print('Configs not imported')
+except Exception as ex:
+    print("Configs not imported")
 
 CURR_USER_KEY = "curr_user"
-DEFAULT_EMAIL_BODY = 'This email is from the SCA group project.'
+DEFAULT_EMAIL_BODY = "This email is from the SCA group project."
+SECRET_KEY = cfg.APP_SECRET_KEY
+MAX_AGE = 172800 # Seconds for 2 days
 
 app = Flask(__name__)
 
-
 ###################Configurations#############
-# work here! << this is where yo left off
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-#     'DATABASE_URL', 'postgres:///iop') # DATABASE_URL = url from 22nd line, iop should be cit
-# this is the global link
-# you're going to have to set the global link
+# Locally
+# app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:admin@127.0.0.1/cit"
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgres://postgres:admin@127.0.0.1/cit"
 
-# URI must start with postgresql since SQLAlchemy has removed the support for postgres
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:password@localhost:5432/cit_seed'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://slgemdemkpkynn:d08fac0fcaadc3122977ceafda543a19c93cf73efeba65ea3b21b305eeaea694@ec2-3-211-228-251.compute-1.amazonaws.com:5432/d7r5ouk3pjk073'
+# Global
+# app.config["SQLALCHEMY_DATABASE_URI"] = "postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc"
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
-app.config["SECRET_KEY"] = "abc123"
+app.config["SECRET_KEY"] = SECRET_KEY
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
-app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Email configurations for email sendoffs.
 gmail_user = cfg.APP_USER
@@ -65,7 +66,7 @@ def login_check(f):
 
         if not g.user:
             flash("Access unauthorized.", "danger")
-            return redirect(url_for('homepage'))
+            return redirect(url_for("homepage"))
 
         return f(*args, **kwargs)
 
@@ -204,26 +205,33 @@ def change_password():
 
 ###################Emails#############
 class Emails():
-
+    url_serializer = URLSafeTimedSerializer(SECRET_KEY, salt=b"new_plans_verify")
+ 
     def __init__(self, 
                  sent_from = gmail_user, 
                  gmail_password = gmail_password, 
-                 to = [email_reviewer]):
+                 to = [email_reviewer],
+                 ):
 
         self.sent_from = sent_from
         self.gmail_password = gmail_password.encode('utf-8')
         self.gmail_password = base64.b64encode(self.gmail_password)
 
-        self.timed_safe_serial = URLSafeTimedSerializer('new_plan_confirmation')
-
+        self.timed_safe_serial = URLSafeTimedSerializer("new_plan_confirmation")
+        
         self.to = to
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         self.email_text = ''
-
-
+        
 
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
-        form = NewPlanForm()
+       
+        token = Emails.url_serializer.dumps("verifying_new_plan")
+        link_head = 'http://127.0.0.1:5000'
+        
+        # Dev note: Later here we will have an accept link and a deny link.
+        confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
+        confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -231,21 +239,15 @@ class Emails():
         body += '\n plan name: ' + new_plan.plan_name
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
         body += '\n plan link: ' + new_plan.plan_url
+        body += '''\n Note: if a plan is accepted, it will be visible to all product users and the public. This is reversible.'''
 
-        # DEV Include a link.
-        body += '\n\n Click this link to confirm new plan and add to the database: '
-        body += '\n\n url safe timed serializer:' + self.timed_safe_serial.dumps([1])
-
+        body += '\n\n TO CONFIRM THE PLAN, click this link: {}'.format(confirmation_link_accept)
+        body += '\n\n TO REJECT THE PLAN, click this link: {}'.format(confirmation_link_reject)
+    
         email_text = """
-        From: %s
-        To: %s
-        Subject: %s
         %s
-        """ % (self.sent_from, ", ".join(self.to), self.subject, body)
+        """ % (body)
         self.email_text = email_text
-
-
-        # request.method == 'POST':
 
         # Protecting Proprietary or Sensitive Information.
         ## Some plan review has already happened. 
@@ -253,8 +255,6 @@ class Emails():
         ## How to review proprietary and sensitive information....
         ## Maybe include a disclaimer in the message.
 
-
-    # @app.route('/login', methods=['POST']) 
     def email_send(self, new_plan):
         try:
             self.email_body(new_plan)
@@ -265,16 +265,32 @@ class Emails():
             smtp_server.sendmail(self.sent_from, self.to, self.email_text)
 
             smtp_server.close()
-            print ("Email sent successfully!")
             return True
 
         except Exception as ex:
-            print ("Something went wrong….", ex)
+            logging.error(ex)
             return False
+
+#     @app.route('/confirm_email/<token>')
+#     def confirm_email(token):
+
+#         try: 
+#             # Max age is in seconds. 
+#             Emails.serializer.loads(token, max_age=10000)
+             
+#             print('making the push to the database')
+#             db.session.add()
+#             db.session.commit()
+
+#         except SignatureExpired:
+#             #Token is expired works!!
+#             return '<h1> The token is expired! </h1>'
+
+#         return '<h1>  The plans have been added. </h1>'
 
 #################New plan#####################
 
-@app.route('/users/<username>/plan/add',methods=["GET","POST"])
+@app.route('/users/<username>/plan/add', methods=["GET","POST"])
 def add_plan(username):
     """User plan form and handing add plan"""
     form = NewPlanForm()
@@ -293,21 +309,18 @@ def add_plan(username):
         geo_extent = form.geo_extent.data,
         habitat = form.habitat.data,
         water_quality = form.water_quality .data,
-        resources_species = form.resources_species.data,
+        resource_species = form.resource_species.data,
         community_resilience = form.community_resilience.data,
         ecosystem_resilience = form.ecosystem_resilience.data,
         gulf_economy = form.gulf_economy.data,
         related_state = form.related_state.data
 
-        # JL: use above information to include in the email.
-        # /new-plan/validate/, methods = ["POST"]
-        # then in the body you'll have some information, plan name, blah blah blah
         # this information will be as a post.  
         # gmail for developers: 
 
-        new_plan = NewPlans(plan_name =plan_name,
+        new_plan = NewPlans(plan_name = plan_name,
                             plan_url = plan_url,
-                            plan_resolution=plan_resolution, 
+                            plan_resolution = plan_resolution, 
                             planning_method = planning_method,
                             # acquisition =acquisition,
                             # easement = easement,
@@ -317,25 +330,35 @@ def add_plan(username):
                             geo_extent = geo_extent,
                             habitat = habitat ,
                             water_quality = water_quality,
-                            resources_species = resources_species,
-                            community_resilience=community_resilience,
-                            ecosystem_resilience=ecosystem_resilience,
+                            resource_species = resource_species,
+                            community_resilience = community_resilience,
+                            ecosystem_resilience = ecosystem_resilience,
                             gulf_economy = gulf_economy,
                             related_state =related_state,
-                            username = username)
-        
+                            username = username,
+                            )
 
+        # Add new plan here.
+        # Persist database but have a verified or not column (boolean). 
+        db.session.add(new_plan)
+        db.session.commit()
+        
+        
         # Implement email notification
         try:
-            email_success = email.email_send(new_plan)
-
+            email.email_send(new_plan)
+            
             if email_success:
-                # Maybe redirect to an error page.
+                # Maybe redirect to an error page. 
                 db.session.add(new_plan)
                 db.session.commit()
-        finally: 
-            # JL: no matter what we re-direct.
-            # Front end might want to add a success or fail message though.
+        finally:
+            flash_body = """Thank you for your submission! An email has been sent to the SCA
+            approval committee. Your plans have been submitted to the SCA management team for
+            approval with a 48 hour turnaround time decision. You can check the approval status
+            of your plans under the 'New plans submitted' section below.
+            """
+            flash(flash_body)
             return redirect(f"/users/{new_plan.username}")
 
     else:
@@ -359,7 +382,7 @@ def show_newplan(plan_id):
         else:
             return redirect(f"/users/{session[CURR_USER_KEY]}")
 
-@app.route('/newplan/<plan_id>/update',methods= ["GET","POST"])
+@app.route('/newplan/<plan_id>/update', methods= ["GET","POST"])
 def update_newplan(plan_id):
     """update newplan"""
     if(not session.get(CURR_USER_KEY)):
@@ -381,7 +404,7 @@ def update_newplan(plan_id):
                 new_plan.geo_extent = form.geo_extent.data,
                 new_plan.habitat = form.habitat.data,
                 new_plan.water_quality = form.water_quality .data,
-                new_plan.resources_species = form.resources_species.data,
+                new_plan.resource_species = form.resource_species.data,
                 new_plan.community_resilience = form.community_resilience.data,
                 new_plan.ecosystem_resilience = form.ecosystem_resilience.data,
                 new_plan.gulf_economy = form.gulf_economy.data,
@@ -406,6 +429,47 @@ def remove_newplan(plan_id):
             db.session.delete(new_plan)
             db.session.commit()
         return redirect(f"/users/{session[CURR_USER_KEY]}")
+    
+## YaH: writing a new route for changing the status of a new plan
+@app.route('/validate/<plan_id>/<update_state>/<token>')
+def validate_plan(plan_id, update_state, token):
+    """Validate or reject a new plan"""
+
+    # Check user admin status and active session. 
+    if(not session.get(CURR_USER_KEY) or not session.get("admin")==True):
+        return redirect("/401")
+    if not plan_id.isnumeric():
+        return redirect('/401')
+    
+    # Check if user token is available.
+    data = Emails.url_serializer.loads(token, max_age=MAX_AGE)
+
+    # If don't have an acceptable rejected state, get it out of here. 
+    if not(update_state=="rejected" or update_state=="committed"):
+        print('update_state:', update_state)
+        print('type(update_state):', type(update_state))
+        return redirect('/error/401.html')
+
+    if(not session.get(CURR_USER_KEY)):
+        # redirect to login page 
+        return redirect("/login")
+    if (not session.get('admin')):
+        return redirect('/401')
+    
+    # JL: 'first get the page to pop-up, then we work on the rest'
+    # Get current state of the plan
+    new_plan = NewPlans.query.get_or_404(plan_id)
+
+    # NOTE: check the state here. If we alreayd have a reject, we can't just click accept. 
+    # This should be true vice versa.
+    if new_plan.status == "rejected" or new_plan.status == "committed":
+        # Anthony/Ethan: let's make a page that says the plan has already been accepted or rejected.
+        return redirect('/error/401')
+        
+    new_plan.status = update_state
+    db.session.commit()
+        
+    return redirect(f"/users/{session[CURR_USER_KEY]}")
 
 #################Plan#########################
 @app.route('/plans/<int:plan_id>')
@@ -458,7 +522,7 @@ def update_plan(plan_id):
         geo_extent = form.geo_extent.data,
         habitat = form.habitat.data,
         water_quality = form.water_quality .data,
-        resources_species = form.resources_species.data,
+        resource_species = form.resource_species.data,
         community_resilience = form.community_resilience.data,
         ecosystem_resilience = form.ecosystem_resilience.data,
         gulf_economy = form.gulf_economy.data,
@@ -476,7 +540,7 @@ def update_plan(plan_id):
                             geo_extent = geo_extent,
                             habitat = habitat ,
                             water_quality = water_quality,
-                            resources_species = resources_species,
+                            resource_species = resource_species,
                             community_resilience=community_resilience,
                             ecosystem_resilience=ecosystem_resilience,
                             gulf_economy = gulf_economy,
@@ -506,7 +570,7 @@ def show_table():
 
 @app.route('/table_get_data')
 def table_get_data():
-    """ Create data for table"""
+    """Create data for table"""
     # Get the parameters
     query_scale = request.args.get("scale")
     query_timeframe = request.args.get("timeframe")
@@ -514,14 +578,14 @@ def table_get_data():
     
     # Chain the filters and add in conditionals
     plan_query = Plans.query
-
+    
     if query_scale and query_scale != "ALL" :
         if query_scale == "SE":
             query_scale = "Regional"
         plan_query = plan_query.filter(Plans.geo_extent == query_scale)
     else:
         plan_query = plan_query
-    
+
     if query_timeframe and query_timeframe != "all":
         if query_timeframe == "within5":
             plan_query = plan_query.filter(Plans.plan_timeframe >= str(2017))
@@ -529,16 +593,17 @@ def table_get_data():
             plan_query = plan_query.filter(Plans.plan_timeframe >= str(2012))
         elif query_timeframe == "over10":
             plan_query = plan_query.filter(Plans.plan_timeframe < str(2012))
+
     else:
         plan_query = plan_query
-
+        
     if query_priority and query_priority != "all":
         if query_priority == "wq":
             plan_query = plan_query.filter(Plans.water_quality != None)
         elif query_priority == "hs":
             plan_query = plan_query.filter(Plans.habitat != None)
         elif query_priority == "rs":
-            plan_query = plan_query.filter(Plans.resources_species != None)
+            plan_query = plan_query.filter(Plans.resource_species != None)
         elif query_priority == "cs":
             plan_query = plan_query.filter(Plans.community_resilience != None)
         elif query_priority == "er":
@@ -550,7 +615,7 @@ def table_get_data():
 
     # Call all() to evaluate the query
     plans = plan_query.all()
-
+    
     return_data = []
     for plan in plans:
         return_data.append(plan.serialize())
@@ -583,7 +648,6 @@ def show_contactus_page():
 
 ###############Map geojson##################
 
-
 @app.route('/get_map_data')
 def get_map_data():
     query_scale = request.args.get("scale")
@@ -591,10 +655,10 @@ def get_map_data():
         geometries = Geom.query.filter(Geom.name.in_(["TX","LA","AL","MS","FL"])).all()
     else:
         geometries = Geom.query.filter(Geom.scale == query_scale).all()
-  
+
     return_data = []
     for geometry in geometries:
-      return_data.append(geometry.serialize())
+        return_data.append(geometry.serialize())
     data = {
       "data": return_data
     }
@@ -605,13 +669,13 @@ def spatial_query():
     # Get the parameters
     query_lng = request.args.get("lng")
     query_lat = request.args.get("lat")
-
+    
     content = {
         "type": "Point",
         "coordinates": [query_lng,query_lat]
     }
     content = json.dumps(content)
-
+    
     geom_query = Geom.query.filter(func.ST_Intersects(func.ST_GeomFromGeoJSON(Geom.coords), func.ST_GeomFromGeoJSON(content))).all()
     matchedgeom = []
     for geom in geom_query:
@@ -626,11 +690,12 @@ def spatial_query():
    
     return_data = []
     for plan in plans:
-      return_data.append(plan.serialize())
+        return_data.append(plan.serialize())
     data = {
       "data": return_data
     }
     return jsonify(data)
+
 
 ################Admin module with flask admin################
 
@@ -665,7 +730,20 @@ class PlanView(CustomView):
         # can return any valid HTML e.g. a link to another view to show the detail or a popup window
         return model.plan_url[:20]
     can_view_details = True
-    column_exclude_list = ('habitat','water_quality','resources_species','community_resilience','ecosystem_resilience','gulf_economy','acquisition','easement','stewardship','plan_timeframe','plan_resolution')
+    column_exclude_list = (
+        'habitat',
+        'water_quality',
+        'resource_species',
+        'community_resilience',
+        'ecosystem_resilience',
+        'gulf_economy',
+        'acquisition',
+        'easement',
+        'stewardship',
+        'plan_timeframe',
+        'plan_resolution'
+    )
+
     column_formatters = {
         'plan_url': _plan_url_formatter
     }
@@ -686,7 +764,7 @@ class PlanView(CustomView):
 
 admin.add_view(UserView(User, db.session))
 admin.add_view(PlanView(Plans, db.session))
-admin.add_view(PlanView(NewPlans, db.session))
+# admin.add_view(PlanView(NewPlans, db.session))
 
 if __name__ == '__main__':
     app.run(debug=True)
