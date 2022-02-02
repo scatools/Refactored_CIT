@@ -268,10 +268,8 @@ backend table
         body += '\n plan name: ' + new_plan.plan_name
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
         body += '\n plan link: ' + new_plan.plan_url
-
         body += '''
         \n Note: if a plan is accepted, it will be visible to all product users and the public. This is reversible.'''
-
         body += '\n\n TO CONFIRM THE PLAN, click this link: {}'.format(confirmation_link_accept)
         body += '\n\n TO REJECT THE PLAN, click this link: {}'.format(confirmation_link_reject)
     
