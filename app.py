@@ -374,6 +374,7 @@ def add_plan(username):
         db.session.add(new_plan)
         db.session.commit()
         
+        
         # Implement email notification
         try:
             email.email_send(new_plan)
@@ -456,7 +457,6 @@ def remove_newplan(plan_id):
             db.session.delete(new_plan)
             db.session.commit()
         return redirect(f"/users/{session[CURR_USER_KEY]}")
-
     
 ## YaH: writing a new route for changing the status of a new plan
 @app.route('/validate/<plan_id>/<update_state>/<token>')
@@ -758,7 +758,20 @@ class PlanView(CustomView):
         # can return any valid HTML e.g. a link to another view to show the detail or a popup window
         return model.plan_url[:20]
     can_view_details = True
-    column_exclude_list = ('habitat','water_quality','resources_species','community_resilience','ecosystem_resilience','gulf_economy','acquisition','easement','stewardship','plan_timeframe','plan_resolution')
+    column_exclude_list = (
+        'habitat',
+        'water_quality',
+        'resources_species',
+        'community_resilience',
+        'ecosystem_resilience',
+        'gulf_economy',
+        'acquisition',
+        'easement',
+        'stewardship',
+        'plan_timeframe',
+        'plan_resolution'
+    )
+
     column_formatters = {
         'plan_url': _plan_url_formatter
     }
