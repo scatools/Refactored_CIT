@@ -111,7 +111,9 @@ class Plans(db.Model):
 class NewPlans(db.Model):
     """Class to refer to plans"""
 
-    __tablename__="newplans"
+    __tablename__="plans"
+    __table_args__ = {'extend_existing': True} 
+    # __abstract__ = True
 
     id=db.Column(db.Integer,primary_key=True,autoincrement= True)
     plan_name = db.Column(db.Text, nullable= False)
@@ -135,7 +137,6 @@ class NewPlans(db.Model):
     is_new = db.Column(db.Boolean, nullable=False, default=True)
     existing_planid = db.Column(db.Integer, db.ForeignKey('plans.id', ondelete="cascade"))
     username = db.Column(db.String(20), db.ForeignKey('users.username'), nullable=False)
-    published = db.Column(db.Boolean, nullable=False, default=False)
 
     existing_plan = db.relationship('Plans')
 
@@ -162,7 +163,6 @@ class NewPlans(db.Model):
             'is_new':self.is_new,
             'existing_planid':self.existing_planid,
             'username':self.username,
-            'published':self.published,
         }
 
 class Geom(db.Model):

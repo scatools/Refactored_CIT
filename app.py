@@ -43,6 +43,7 @@ app = Flask(__name__)
 # Locally
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@127.0.0.1/cit'
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc"
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = "abc123"
@@ -259,6 +260,7 @@ class Emails():
         # Dev note: Later here we will have an accept link and a deny link.
         confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
         confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
+backend table
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -299,7 +301,7 @@ class Emails():
 
         except Exception as ex:
             return False
-    
+
 #     @app.route('/confirm_email/<token>')
 #     def confirm_email(token):
 
@@ -365,7 +367,6 @@ def add_plan(username):
                             gulf_economy = gulf_economy,
                             related_state =related_state,
                             username = username,
-                            published = False,
                             )
 
         # Add new plan here.
@@ -778,7 +779,7 @@ class PlanView(CustomView):
 
 admin.add_view(UserView(User, db.session))
 admin.add_view(PlanView(Plans, db.session))
-admin.add_view(PlanView(NewPlans, db.session))
+# admin.add_view(PlanView(NewPlans, db.session))
 
 if __name__ == '__main__':
     app.run(debug=True)
