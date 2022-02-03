@@ -13,8 +13,7 @@ import geoalchemy2.functions as func
 import json
 import smtplib
 import datetime
-from itsdangerous import SignatureExpired
-from itsdangerous.url_safe import URLSafeTimedSerializer
+from itsdangerous import SignatureExpired, URLSafeTimedSerializer
 
 import sqlalchemy
 from sqlalchemy.exc import IntegrityError
@@ -30,6 +29,8 @@ except:
 
 CURR_USER_KEY = "curr_user"
 DEFAULT_EMAIL_BODY = "This email is from the SCA group project."
+SECRET_KEY = cfg.APP_SECRET_KEY
+MAX_AGE = 172800 # Seconds for 2 days
 
 app = Flask(__name__)
 
@@ -49,7 +50,6 @@ app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = "abc123"
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-
 
 # Email configurations for email sendoffs.
 gmail_user = cfg.APP_USER
@@ -207,7 +207,6 @@ def change_password():
 
 ###################Emails#############
 class Emails():
-    
     url_serializer = URLSafeTimedSerializer(SECRET_KEY, salt=b"new_plans_verify")
  
     def __init__(self, 
@@ -225,42 +224,16 @@ class Emails():
         self.to = to
         self.subject = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         self.email_text = ''
-
-        # self.new_plan = new_plan
-    
-    # @
-    # def 
-    # Create plan confirmation page workflow 
-#     @app.route('/users/<plan_id>/delete', methods = ["POST"])
-#     def delete_user(username):
-    #     """delete a user"""
-    #     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
-    #         user = User.query.get_or_404(username)
-    #         db.session.delete(user)
-    #         db.session.commit()
-    #         session.pop(CURR_USER_KEY)
-#     return redirect("/")'
-
-# @app.route('/users/<username>')
-# def view_user_detail(username):
-#     """Show user detail"""
-#     print(session[CURR_USER_KEY])
-#     if(session.get(CURR_USER_KEY)) and (username == session.get(CURR_USER_KEY) or session.get("admin")==True):
-#         user = User.query.get_or_404(session[CURR_USER_KEY])
-#         return render_template("/user/user_detail.html", user= user)
-#     else:
-#         return redirect("/401")
+        
 
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
        
         token = Emails.url_serializer.dumps("verifying_new_plan")
-
         link_head = 'http://127.0.0.1:5000'
         
         # Dev note: Later here we will have an accept link and a deny link.
         confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
         confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
-backend table
 
         body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
         body += '\n This is a test email from Python Dev App.'
@@ -268,8 +241,8 @@ backend table
         body += '\n plan name: ' + new_plan.plan_name
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
         body += '\n plan link: ' + new_plan.plan_url
-        body += '''
-        \n Note: if a plan is accepted, it will be visible to all product users and the public. This is reversible.'''
+        body += '''\n Note: if a plan is accepted, it will be visible to all product users and the public. This is reversible.'''
+
         body += '\n\n TO CONFIRM THE PLAN, click this link: {}'.format(confirmation_link_accept)
         body += '\n\n TO REJECT THE PLAN, click this link: {}'.format(confirmation_link_reject)
     
@@ -283,7 +256,6 @@ backend table
         ## Endangered species locations.
         ## How to review proprietary and sensitive information....
         ## Maybe include a disclaimer in the message.
-
 
     def email_send(self, new_plan):
         try:
