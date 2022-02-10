@@ -1,5 +1,6 @@
 import os
 import base64
+import logging
 
 from flask import Flask, render_template, redirect, session, flash, jsonify, request, g, url_for
 # from flask_debugtoolbar import DebugToolbarExtension
@@ -24,7 +25,7 @@ from flask_admin.menu import MenuLink
 
 try: 
     import config as cfg
-except:
+except Exception as ex:
     print("Configs not imported")
 
 CURR_USER_KEY = "curr_user"
@@ -34,20 +35,17 @@ MAX_AGE = 172800 # Seconds for 2 days
 
 app = Flask(__name__)
 
-
 ###################Configurations#############
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-#     'DATABASE_URL', 'postgres:///iop') # DATABASE_URL = url from 22nd line, iop should be cit
-# this is the global link
-# you're going to have to set the global link 
-#
 # Locally
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@127.0.0.1/cit'
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc"
+# app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:admin@127.0.0.1/cit"
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgres://postgres:admin@127.0.0.1/cit"
+
+# Global
+# app.config["SQLALCHEMY_DATABASE_URI"] = "postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
-app.config["SECRET_KEY"] = "abc123"
+app.config["SECRET_KEY"] = SECRET_KEY
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
@@ -270,6 +268,7 @@ class Emails():
             return True
 
         except Exception as ex:
+            logging.error(ex)
             return False
 
 #     @app.route('/confirm_email/<token>')
@@ -310,9 +309,9 @@ def add_plan(username):
         geo_extent = form.geo_extent.data,
         habitat = form.habitat.data,
         water_quality = form.water_quality .data,
-        resources_species = form.resources_species.data,
+        resource_species = form.resource_species.data,
         community_resilience = form.community_resilience.data,
-        ecosystem_resilience = form.ecosystem_resiliece.data,
+        ecosystem_resilience = form.ecosystem_resilience.data,
         gulf_economy = form.gulf_economy.data,
         related_state = form.related_state.data
 
@@ -331,7 +330,7 @@ def add_plan(username):
                             geo_extent = geo_extent,
                             habitat = habitat ,
                             water_quality = water_quality,
-                            resources_species = resources_species,
+                            resource_species = resource_species,
                             community_resilience = community_resilience,
                             ecosystem_resilience = ecosystem_resilience,
                             gulf_economy = gulf_economy,
@@ -348,7 +347,7 @@ def add_plan(username):
         # Implement email notification
         try:
             email.email_send(new_plan)
-
+            
             if email_success:
                 # Maybe redirect to an error page. 
                 db.session.add(new_plan)
@@ -402,7 +401,7 @@ def update_newplan(plan_id):
                 new_plan.geo_extent = form.geo_extent.data,
                 new_plan.habitat = form.habitat.data,
                 new_plan.water_quality = form.water_quality .data,
-                new_plan.resources_species = form.resources_species.data,
+                new_plan.resource_species = form.resource_species.data,
                 new_plan.community_resilience = form.community_resilience.data,
                 new_plan.ecosystem_resilience = form.ecosystem_resilience.data,
                 new_plan.gulf_economy = form.gulf_economy.data,
@@ -520,7 +519,7 @@ def update_plan(plan_id):
         geo_extent = form.geo_extent.data,
         habitat = form.habitat.data,
         water_quality = form.water_quality .data,
-        resources_species = form.resources_species.data,
+        resource_species = form.resource_species.data,
         community_resilience = form.community_resilience.data,
         ecosystem_resilience = form.ecosystem_resilience.data,
         gulf_economy = form.gulf_economy.data,
@@ -538,7 +537,7 @@ def update_plan(plan_id):
                             geo_extent = geo_extent,
                             habitat = habitat ,
                             water_quality = water_quality,
-                            resources_species = resources_species,
+                            resource_species = resource_species,
                             community_resilience=community_resilience,
                             ecosystem_resilience=ecosystem_resilience,
                             gulf_economy = gulf_economy,
@@ -601,7 +600,7 @@ def table_get_data():
         elif query_priority == "hs":
             plan_query = plan_query.filter(Plans.habitat != None)
         elif query_priority == "rs":
-            plan_query = plan_query.filter(Plans.resources_species != None)
+            plan_query = plan_query.filter(Plans.resource_species != None)
         elif query_priority == "cs":
             plan_query = plan_query.filter(Plans.community_resilience != None)
         elif query_priority == "er":
@@ -731,7 +730,7 @@ class PlanView(CustomView):
     column_exclude_list = (
         'habitat',
         'water_quality',
-        'resources_species',
+        'resource_species',
         'community_resilience',
         'ecosystem_resilience',
         'gulf_economy',
