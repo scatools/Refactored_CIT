@@ -352,10 +352,13 @@ def add_plan(username):
                 # Maybe redirect to an error page. 
                 db.session.add(new_plan)
                 db.session.commit()
-        finally: 
-            # JL: no matter what we re-direct.
-            # Front end might want to add a success or fail message though.
-            # May want a check email message sent??
+        finally:
+            flash_body = """Thank you for your submission! An email has been sent to the SCA
+            approval committee. Your plans have been submitted to the SCA management team for
+            approval with a 48 hour turnaround time decision. You can check the approval status
+            of your plans under the 'New plans submitted' section below.
+            """
+            flash(flash_body)
             return redirect(f"/users/{new_plan.username}")
 
     else:
