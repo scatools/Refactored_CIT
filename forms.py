@@ -18,8 +18,6 @@ class LoginForm(FlaskForm):
     username = StringField("Username", validators=[InputRequired()])
     password = PasswordField("Password", validators=[InputRequired()])
 
-
-
 class ChangePasswordFrom(FlaskForm):
     """Change password"""
     password = PasswordField('Current Password', validators=[Length(min=6)])
@@ -47,7 +45,7 @@ class NewPlanForm(FlaskForm):
     geo_extent = SelectField("Geo Extent", choices=[('SE', 'Southeast Region'), ('AL', 'Alabama'), ('FL', 'Florida'),('MS', 'Mississippi'), ('LA', 'Louisana'), ('TX', 'Texas')])
     habitat = TextAreaField("Habitat", render_kw={"placeholder": "Optional"})
     water_quality = TextAreaField("Water Quality", render_kw={"placeholder": "Optional"})
-    resources_species = TextAreaField("Resources Species", render_kw={"placeholder": "Optional"})
+    resource_species = TextAreaField("Resource Species", render_kw={"placeholder": "Optional"})
     community_resilience = TextAreaField("Community Resilience", render_kw={"placeholder": "Optional"})
     ecosystem_resilience = TextAreaField("Ecosystem Resilience", render_kw={"placeholder": "Optional"})
     gulf_economy = TextAreaField("Gulf Economy", render_kw={"placeholder": "Optional"})

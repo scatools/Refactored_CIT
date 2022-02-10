@@ -81,7 +81,7 @@ class Plans(db.Model):
     geo_extent = db.Column(db.Text)
     habitat = db.Column(db.Text)
     water_quality = db.Column(db.Text)
-    resources_species = db.Column(db.Text)
+    resource_species = db.Column(db.Text)
     community_resilience = db.Column(db.Text)
     ecosystem_resilience = db.Column(db.Text)
     gulf_economy = db.Column(db.Text)
@@ -101,7 +101,7 @@ class Plans(db.Model):
             'agency_lead':self.agency_lead,
             'habitat': self.habitat,
             'water_quality': self.water_quality,
-            'resources_species': self.resources_species,
+            'resource_species': self.resource_species,
             'community_resilience': self.community_resilience,
             'ecosystem_resilience': self.ecosystem_resilience,
             'gulf_economy':self.gulf_economy,
@@ -128,7 +128,7 @@ class NewPlans(db.Model):
     geo_extent = db.Column(db.Text)
     habitat = db.Column(db.Text)
     water_quality = db.Column(db.Text)
-    resources_species = db.Column(db.Text)
+    resource_species = db.Column(db.Text)
     community_resilience = db.Column(db.Text)
     ecosystem_resilience = db.Column(db.Text)
     gulf_economy = db.Column(db.Text)
@@ -154,7 +154,7 @@ class NewPlans(db.Model):
             'agency_lead':self.agency_lead,
             'habitat': self.habitat,
             'water_quality': self.water_quality,
-            'resources_species': self.resources_species,
+            'resource_species': self.resource_species,
             'community_resilience': self.community_resilience,
             'ecosystem_resilience': self.ecosystem_resilience,
             'gulf_economy':self.gulf_economy,
