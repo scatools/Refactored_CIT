@@ -37,11 +37,10 @@ app = Flask(__name__)
 
 ###################Configurations#############
 # Locally
-# app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:admin@127.0.0.1/cit"
-app.config['SQLALCHEMY_DATABASE_URI'] = "postgres://postgres:admin@127.0.0.1/cit"
+# app.config['SQLALCHEMY_DATABASE_URI'] = "postgres://postgres:admin@127.0.0.1/cit"
 
 # Global
-# app.config["SQLALCHEMY_DATABASE_URI"] = "postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc"
+app.config["SQLALCHEMY_DATABASE_URI"] = "postgres://jykztlfyiujmsg:bbe0ddc19b7221fb23a3a6bc3841574556d96820f08f68761177f77aba1bfefc@ec2-35-153-114-74.compute-1.amazonaws.com:5432/d4n0vbk2s8v0tc"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
