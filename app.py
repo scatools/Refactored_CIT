@@ -30,7 +30,7 @@ except Exception as ex:
 
 CURR_USER_KEY = "curr_user"
 DEFAULT_EMAIL_BODY = "This email is from the SCA group project."
-SECRET_KEY = cfg.APP_SECRET_KEY
+# SECRET_KEY = cfg.APP_SECRET_KEY
 MAX_AGE = 172800 # Seconds for 2 days
 
 app = Flask(__name__)
