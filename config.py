@@ -16,8 +16,8 @@ from pathlib import Path
 # For deployment on Heroku:
 
 # Need to set these config variables beforehand in Heroku environment settings
-# For more details, refer to https://devcenter.heroku.com/articles/config-vars
-APP_USER = os.environ['APP_USER']
-# APP_PASSWORD = os.environ['APP_PASSWORD']
-# APP_REVIEWER = os.environ['APP_REVIEWER']
-# APP_SECRET_KEY = os.environ['APP_SECRET_KEY']
+# For more details, refer to https://devcenter.heroku.com/articles/config-var
+APP_USER = ENV['APP_USER']
+APP_PASSWORD = ENV['APP_PASSWORD']
+APP_REVIEWER = ENV['APP_REVIEWER']
+APP_SECRET_KEY = ENV['APP_SECRET_KEY']
