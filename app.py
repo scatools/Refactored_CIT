@@ -309,7 +309,7 @@ def add_plan(username):
         geo_extent = form.geo_extent.data,
         habitat = form.habitat.data,
         water_quality = form.water_quality .data,
-        resource_species = form.resource_species.data,
+        resources_species = form.resources_species.data,
         community_resilience = form.community_resilience.data,
         ecosystem_resilience = form.ecosystem_resilience.data,
         gulf_economy = form.gulf_economy.data,
@@ -330,7 +330,7 @@ def add_plan(username):
                             geo_extent = geo_extent,
                             habitat = habitat ,
                             water_quality = water_quality,
-                            resource_species = resource_species,
+                            resources_species = resources_species,
                             community_resilience = community_resilience,
                             ecosystem_resilience = ecosystem_resilience,
                             gulf_economy = gulf_economy,
@@ -404,7 +404,7 @@ def update_newplan(plan_id):
                 new_plan.geo_extent = form.geo_extent.data,
                 new_plan.habitat = form.habitat.data,
                 new_plan.water_quality = form.water_quality .data,
-                new_plan.resource_species = form.resource_species.data,
+                new_plan.resources_species = form.resources_species.data,
                 new_plan.community_resilience = form.community_resilience.data,
                 new_plan.ecosystem_resilience = form.ecosystem_resilience.data,
                 new_plan.gulf_economy = form.gulf_economy.data,
@@ -522,7 +522,7 @@ def update_plan(plan_id):
         geo_extent = form.geo_extent.data,
         habitat = form.habitat.data,
         water_quality = form.water_quality .data,
-        resource_species = form.resource_species.data,
+        resources_species = form.resources_species.data,
         community_resilience = form.community_resilience.data,
         ecosystem_resilience = form.ecosystem_resilience.data,
         gulf_economy = form.gulf_economy.data,
@@ -540,7 +540,7 @@ def update_plan(plan_id):
                             geo_extent = geo_extent,
                             habitat = habitat ,
                             water_quality = water_quality,
-                            resource_species = resource_species,
+                            resources_species = resources_species,
                             community_resilience=community_resilience,
                             ecosystem_resilience=ecosystem_resilience,
                             gulf_economy = gulf_economy,
@@ -603,7 +603,7 @@ def table_get_data():
         elif query_priority == "hs":
             plan_query = plan_query.filter(Plans.habitat != None)
         elif query_priority == "rs":
-            plan_query = plan_query.filter(Plans.resource_species != None)
+            plan_query = plan_query.filter(Plans.resources_species != None)
         elif query_priority == "cs":
             plan_query = plan_query.filter(Plans.community_resilience != None)
         elif query_priority == "er":
@@ -733,7 +733,7 @@ class PlanView(CustomView):
     column_exclude_list = (
         'habitat',
         'water_quality',
-        'resource_species',
+        'resources_species',
         'community_resilience',
         'ecosystem_resilience',
         'gulf_economy',
