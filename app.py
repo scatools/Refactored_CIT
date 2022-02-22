@@ -27,6 +27,8 @@ try:
     import config as cfg
 except Exception as ex:
     print("Configs not imported")
+    print("exception YAH")
+    print(ex)
 
 CURR_USER_KEY = "curr_user"
 DEFAULT_EMAIL_BODY = "This email is from the SCA group project."
