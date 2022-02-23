@@ -270,23 +270,7 @@ class Emails():
         except Exception as ex:
             logging.error(ex)
             return False
-
-#     @app.route('/confirm_email/<token>')
-#     def confirm_email(token):
-
-#         try: 
-#             # Max age is in seconds. 
-#             Emails.serializer.loads(token, max_age=10000)
-             
-#             print('making the push to the database')
-#             db.session.add()
-#             db.session.commit()
-
-#         except SignatureExpired:
-#             #Token is expired works!!
-#             return '<h1> The token is expired! </h1>'
-
-#         return '<h1>  The plans have been added. </h1>'
+        
 
 #################New plan#####################
 
@@ -352,6 +336,8 @@ def add_plan(username):
                 # Maybe redirect to an error page. 
                 db.session.add(new_plan)
                 db.session.commit()
+        except ex:
+            logging.exception("Email Failed with exception!")
         finally:
             flash_body = """Thank you for your submission! An email has been sent to the SCA
             approval committee. Your plans have been submitted to the SCA management team for
