@@ -331,13 +331,15 @@ def add_plan(username):
         # Implement email notification
         try:
             email.email_send(new_plan)
+            print("tried sending a new plan email")
             
             if email_success:
                 # Maybe redirect to an error page. 
                 db.session.add(new_plan)
                 db.session.commit()
         except ex:
-            logging.exception("Email Failed with exception!")
+            print("failed sending a new plan email")
+            logging.exception("Email failed with exception!")
         finally:
             flash_body = """Thank you for your submission! An email has been sent to the SCA
             approval committee. Your plans have been submitted to the SCA management team for
