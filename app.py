@@ -48,11 +48,17 @@ app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = SECRET_KEY
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["HEROKU_APP_NAME"] = os.environ.get("HEROKU_APP_NAME")
 
 # Email configurations for email sendoffs.
 gmail_user = cfg.APP_USER
 gmail_password = cfg.APP_PASSWORD
 email_reviewer = cfg.APP_REVIEWER
+# Local deploy.
+#LINK_HEAD = 'http://127.0.0.1:5000' 
+##DEV this:
+# Global dynamic deploy.
+LINK_HEAD = "https://" + app.config["HEROKU_APP_NAME"] + "herokuapp.com"
 
 connect_db(app)
 
@@ -227,14 +233,14 @@ class Emails():
     def email_body(self, new_plan, email_text = DEFAULT_EMAIL_BODY, ):
        
         token = Emails.url_serializer.dumps("verifying_new_plan")
-        link_head = 'http://127.0.0.1:5000'
+        
+        /validate/<plan_id>/<update_state>/<token>
         
         # Dev note: Later here we will have an accept link and a deny link.
-        confirmation_link_accept = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
-        confirmation_link_reject = link_head + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
-
-        body = 'sca_project_test_email at: ' + str(datetime.datetime.now())
-        body += '\n This is a test email from Python Dev App.'
+        confirmation_link_accept = LINK_HEAD + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
+        confirmation_link_reject = LINK_HEAD + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
+        
+        body = '\n This is a test email from Python Dev App.'
         body += '\n user request: ' + new_plan.username
         body += '\n plan name: ' + new_plan.plan_name
         body += '\n plan time frame: ' + str(new_plan.plan_timeframe)
@@ -245,6 +251,8 @@ class Emails():
         body += '\n\n TO REJECT THE PLAN, click this link: {}'.format(confirmation_link_reject)
     
         email_text = """
+        Subject: SCA Confirmation Email ...
+        ...
         %s
         """ % (body)
         self.email_text = email_text
@@ -258,7 +266,7 @@ class Emails():
     def email_send(self, new_plan):
         try:
             self.email_body(new_plan)
-
+            
             smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             smtp_server.ehlo()
             smtp_server.login(self.sent_from, base64.b64decode(self.gmail_password).decode())
@@ -334,7 +342,6 @@ def add_plan(username):
             print("tried sending a new plan email")
             
             if email_success:
-                # Maybe redirect to an error page. 
                 db.session.add(new_plan)
                 db.session.commit()
         except ex:
