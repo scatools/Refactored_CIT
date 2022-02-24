@@ -268,7 +268,7 @@ class Emails():
             return True
 
         except Exception as ex:
-            logging.error(ex)
+            logging.exception("Error attempting to send confirmation email.")
             return False
         
 
