@@ -48,7 +48,7 @@ app.config["SQLALCHEMY_ECHO"] = True
 app.config["SECRET_KEY"] = SECRET_KEY
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-app.config["HEROKU_APP_NAME"] = os.environ.get("HEROKU_APP_NAME")
+app.config["HEROKU_APP_NAME"] = HEROKU_APP_NAME
 
 # Email configurations for email sendoffs.
 gmail_user = cfg.APP_USER
