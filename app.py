@@ -234,8 +234,6 @@ class Emails():
        
         token = Emails.url_serializer.dumps("verifying_new_plan")
         
-        /validate/<plan_id>/<update_state>/<token>
-        
         # Dev note: Later here we will have an accept link and a deny link.
         confirmation_link_accept = LINK_HEAD + url_for('validate_plan', plan_id = str(new_plan.id), update_state='committed', token = token)
         confirmation_link_reject = LINK_HEAD + url_for('validate_plan', plan_id = str(new_plan.id), update_state='rejected', token = token )
