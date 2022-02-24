@@ -58,7 +58,7 @@ email_reviewer = cfg.APP_REVIEWER
 #LINK_HEAD = 'http://127.0.0.1:5000' 
 ##DEV this:
 # Global dynamic deploy.
-LINK_HEAD = "https://" + app.config["HEROKU_APP_NAME"] + "herokuapp.com"
+LINK_HEAD = "https://sca-cit-frontend.herokuapp.com/"
 
 connect_db(app)
 
