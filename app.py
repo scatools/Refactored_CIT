@@ -515,6 +515,9 @@ def table_get_data():
     # Chain the filters and add in conditionals
     plan_query = Plans.query
 
+    # Filter out all the plans that include missing information
+    plan_query = plan_query.filter(Plans.planning_method != "NULL")
+
     if query_scale and query_scale != "ALL" :
         if query_scale == "SE":
             query_scale = "Regional"
